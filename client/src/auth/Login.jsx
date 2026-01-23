@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { WalletMinimal } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
@@ -46,7 +47,9 @@ const Login = () => {
       <div className="w-full max-w-md rounded-3xl bg-[#1e293b]/90 backdrop-blur-xl border border-white/5 p-8 shadow-2xl relative z-10">
         {/* Header: Logo & Sapaan */}
         <div className="mb-8 text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl shadow-lg shadow-blue-500/30 mb-4">💎</div>
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl shadow-lg shadow-blue-500/30 mb-4 text-white">
+            <WalletMinimal />
+          </div>
           <h2 className="text-2xl font-bold text-white tracking-tight">Login</h2>
           <p className="text-sm text-gray-400 mt-2">Start managing your finances now.</p>
         </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import { WalletMinimal } from "lucide-react";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -49,7 +50,9 @@ const Register = () => {
       <div className="w-full max-w-md rounded-3xl bg-[#1e293b]/90 backdrop-blur-xl border border-white/5 p-8 shadow-2xl relative z-10">
         {/* Header: Logo & Judul */}
         <div className="mb-8 text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl shadow-lg shadow-blue-500/30 mb-4">💎</div>
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl shadow-lg shadow-blue-500/30 mb-4 text-white">
+            <WalletMinimal />
+          </div>
           <h2 className="text-2xl font-bold text-white tracking-tight">Register</h2>
           <p className="text-sm text-gray-400 mt-2">Create Account.</p>
         </div>
@@ -67,7 +70,7 @@ const Register = () => {
             <input
               type="text"
               className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition disabled:opacity-50"
-              placeholder="Contoh: Syzen"
+              placeholder="Example: Syzen"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isLoading} // Input juga dimatikan saat loading

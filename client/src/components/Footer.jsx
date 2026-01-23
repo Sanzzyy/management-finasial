@@ -13,7 +13,7 @@ const Footer = () => {
                 <span className="font-bold text-sm">💎</span>
               </div>
               <h2 className="text-lg font-bold text-white font-sans">
-                Dompet<span className="text-blue-500">Pintar</span>
+                Management<span className="text-blue-500">Smart</span>
               </h2>
             </div>
             <p className="text-sm text-gray-400 leading-relaxed max-w-xs">A personal finance management app designed to help students and young professionals master their cashflow intelligently.</p>
@@ -80,7 +80,7 @@ const Footer = () => {
 
         {/* --- BOTTOM SECTION: COPYRIGHT --- */}
         <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500 text-center md:text-left">&copy; {new Date().getFullYear()} DompetPintar. All rights reserved.</p>
+          <p className="text-xs text-gray-500 text-center md:text-left">&copy; {new Date().getFullYear()} Management Smart. All rights reserved.</p>
 
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <span>Made with</span>
