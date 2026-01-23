@@ -5,11 +5,13 @@ import { useNavigate, Link } from "react-router-dom";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Tambahkan ini
   const [msg, setMsg] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // 1. Kunci tombol saat mulai
     try {
       const response = await axios.post("/api/auth/login", {
         email,
@@ -85,9 +87,25 @@ const Login = () => {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3.5 font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.02] transition transform active:scale-95"
+            disabled={isLoading} // Matikan fungsi klik jika loading
+            className={`
+              w-full py-3 rounded-xl font-bold transition-all text-white
+              ${
+                isLoading
+                  ? "bg-gray-500 cursor-not-allowed opacity-70" // Gaya saat loading (Abu-abu)
+                  : "bg-blue-600 hover:bg-blue-500 hover:shadow-lg active:scale-95" // Gaya normal
+              }
+            `}
           >
-            Masuk Sekarang
+            {/* Ganti teks tombol sesuai kondisi */}
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                <span>Memproses...</span>
+              </div>
+            ) : (
+              "Masuk Sekarang"
+            )}
           </button>
         </form>
 
