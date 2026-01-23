@@ -5,9 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url       = env("POSTGRES_PRISMA_URL") // Koneksi Pooling (Cepat)
-  directUrl = env("POSTGRES_URL_NON_POOLING") // Koneksi Langsung (Untuk Migrasi)
+  provider = "postgresql"
+  url       = env("POSTGRES_URL") 
 }
 
 // ... (Model User dan Transaction biarkan sama seperti sebelumnya)
