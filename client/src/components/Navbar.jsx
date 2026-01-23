@@ -54,7 +54,7 @@ const Navbar = () => {
             </div>
             <div className="block">
               <h1 className="text-lg font-bold leading-none text-white tracking-wide font-sans">
-                Dompet<span className="text-blue-500">Pintar</span>
+                Management<span className="text-blue-500"> Finasial</span>
               </h1>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-0.5">Premium Manager</p>
             </div>
