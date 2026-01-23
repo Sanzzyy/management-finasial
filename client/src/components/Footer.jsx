@@ -1,4 +1,4 @@
-import { Heart, Github, Instagram, Linkedin, Coffee, ExternalLink } from "lucide-react";
+import { Heart, Github, Instagram, Linkedin, Coffee, ExternalLink, WalletMinimal } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -10,7 +10,9 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg">
-                <span className="font-bold text-sm">💎</span>
+                <span className="font-bold text-white">
+                  <WalletMinimal width={20} />
+                </span>
               </div>
               <h2 className="text-lg font-bold text-white font-sans">
                 Management<span className="text-blue-500">Smart</span>
@@ -51,16 +53,22 @@ const Footer = () => {
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Support Developer</h3>
             <p className="text-sm text-gray-400 mb-4">Enjoying the app? Buy me a coffee to keep the code flowing! ☕</p>
 
-            {/* Saweria Button */}
             <a
               href="https://saweria.co/Syzen23"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[#ffaa00] hover:bg-[#ffaa00]/90 text-black font-bold px-4 py-2.5 rounded-xl transition-transform hover:scale-105 shadow-lg shadow-orange-500/20"
+              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#ffaa00] to-[#f59e0b] px-5 py-2.5 font-bold text-black shadow-lg shadow-orange-500/30 transition-all duration-300 hover:scale-105 hover:shadow-orange-500/50 active:scale-95"
             >
-              <Coffee size={18} />
-              <span>Support on Saweria</span>
-              <ExternalLink size={14} className="opacity-50" />
+              {/* Efek Kilatan (Shimmer) */}
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 ease-in-out group-hover:translate-x-full" />
+
+              {/* Icon Kopi (Goyang dikit pas hover) */}
+              <Coffee size={18} className="relative z-10 transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-110" />
+
+              <span className="relative z-10">Traktir Kopi</span>
+
+              {/* Icon Panah (Geser dikit pas hover) */}
+              <ExternalLink size={14} className="relative z-10 opacity-50 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
             </a>
 
             {/* Social Icons */}
