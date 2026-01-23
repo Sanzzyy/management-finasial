@@ -1,0 +1,225 @@
+import { useState, useRef, useEffect } from "react";
+import axios from "axios";
+import { MessageCircle, X, Send, Bot, User, Sparkles, ChevronDown, Trash2 } from "lucide-react";
+
+const ChatAssistant = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([{ role: "ai", text: "Halo! Aku FinBot 🤖. Mau cek kesehatan finansialmu hari ini?", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  // Quick Prompts (Pertanyaan Cepat)
+  const quickPrompts = ["Analisa keuanganku 📊", "Saran hemat dong 💡", "Total pengeluaran bulan ini? 💸", "Target tabunganku aman? 🎯"];
+
+  // Auto scroll ke bawah chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
+
+  const handleSend = async (textInput = null) => {
+    // Bisa menerima input dari form (e) atau dari Quick Prompt (string)
+    let userMessage = input;
+
+    // Jika dipanggil dari form submit
+    if (textInput && typeof textInput !== "string") {
+      textInput.preventDefault();
+    } else if (typeof textInput === "string") {
+      // Jika dipanggil dari Quick Prompt
+      userMessage = textInput;
+    }
+
+    if (!userMessage.trim()) return;
+
+    setInput("");
+
+    // 1. Tampilkan pesan user
+    const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    setMessages((prev) => [...prev, { role: "user", text: userMessage, time: timeNow }]);
+    setIsLoading(true);
+
+    try {
+      const storedUser = localStorage.getItem("user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
+      if (!userId) {
+        setMessages((prev) => [...prev, { role: "ai", text: "Silakan login dulu ya!", time: timeNow }]);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Kirim ke Backend
+      const response = await axios.post("/api/chat", {
+        message: userMessage,
+        userId: userId,
+      });
+
+      // 3. Tampilkan balasan AI
+      setMessages((prev) => [...prev, { role: "ai", text: response.data.reply, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+    } catch (error) {
+      setMessages((prev) => [...prev, { role: "ai", text: "Maaf, aku lagi pusing. Coba lagi nanti ya.", time: timeNow }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([{ role: "ai", text: "Chat berhasil dibersihkan. Ada yang lain? ✨", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+  };
+
+  return (
+    <div className="fixed bottom-24 right-4 z-[60] md:bottom-10 md:right-10 font-sans">
+      {/* CUSTOM STYLE UNTUK SCROLLBAR & ANIMASI */}
+      <style>{`
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar { height: 6px; }
+        .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 0px; }
+        .chat-scroll::-webkit-scrollbar-thumb:hover { background-color: #475569; }
+        
+        @keyframes messagePop {
+          0% { opacity: 0; transform: translateY(10px) scale(0.95); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-message { animation: messagePop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
+
+      {/* --- CHAT WINDOW --- */}
+      {isOpen && (
+        <div
+          className={`
+                flex flex-col mb-4 
+                w-[90vw] h-[550px] md:w-[400px] md:h-[600px]
+                bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 
+                rounded-[2rem] shadow-2xl overflow-hidden
+                transform transition-all duration-300 origin-bottom-right
+                animate-message
+            `}
+        >
+          {/* 1. HEADER */}
+          <div className="bg-[#1e293b]/50 backdrop-blur-md p-4 flex justify-between items-center border-b border-white/5 sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <Bot size={20} className="text-white" />
+                </div>
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[#1e293b] rounded-full"></span>
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-sm flex items-center gap-1">
+                  FinBot <Sparkles size={12} className="text-amber-400 fill-amber-400" />
+                </h3>
+                <p className="text-blue-200/60 text-[10px] font-medium tracking-wide">Always Online</p>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <button onClick={clearChat} className="p-2 text-gray-400 hover:text-red-400 hover:bg-white/5 rounded-full transition" title="Clear Chat">
+                <Trash2 size={16} />
+              </button>
+              <button onClick={() => setIsOpen(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-full transition">
+                <ChevronDown size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* 2. MESSAGES AREA */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-5 chat-scroll bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex gap-3 animate-message ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                {/* Avatar Icon */}
+                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-md ${msg.role === "user" ? "bg-gray-700" : "bg-gradient-to-br from-blue-600 to-indigo-600"}`}>
+                  {msg.role === "user" ? <User size={14} className="text-gray-300" /> : <Bot size={14} className="text-white" />}
+                </div>
+
+                {/* Bubble */}
+                <div className={`flex flex-col max-w-[75%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                  <div
+                    className={`
+                        px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm
+                        ${msg.role === "user" ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-tr-none" : "bg-[#1e293b] border border-white/10 text-gray-200 rounded-tl-none shadow-[0_2px_10px_rgba(0,0,0,0.2)]"}
+                    `}
+                  >
+                    {msg.text}
+                  </div>
+                  <span className="text-[10px] text-gray-500 mt-1 px-1 opacity-70">{msg.time}</span>
+                </div>
+              </div>
+            ))}
+
+            {/* Loading Animation */}
+            {isLoading && (
+              <div className="flex gap-3 animate-message">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+                  <Bot size={14} className="text-white" />
+                </div>
+                <div className="bg-[#1e293b] border border-white/10 px-4 py-4 rounded-2xl rounded-tl-none flex gap-1.5 items-center">
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></span>
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce delay-100"></span>
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce delay-200"></span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* 3. QUICK PROMPTS (Chips) */}
+          {!isLoading && messages.length < 5 && (
+            <div className="px-4 py-2 flex gap-2 overflow-x-auto chat-scroll border-t border-white/5 bg-[#0f172a]/50 backdrop-blur">
+              {quickPrompts.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSend(prompt)}
+                  className="flex-shrink-0 px-3 py-1.5 bg-[#1e293b] hover:bg-blue-600/20 hover:text-blue-300 border border-white/10 rounded-full text-[10px] sm:text-xs text-gray-300 transition-all duration-200 active:scale-95 whitespace-nowrap"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 4. INPUT AREA */}
+          <div className="p-3 bg-[#1e293b]/80 backdrop-blur-md border-t border-white/10">
+            <form onSubmit={handleSend} className="relative flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Tanya apa saja..."
+                className="w-full bg-[#0f172a] text-white text-sm pl-4 pr-12 py-3.5 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 border border-white/10 transition-all placeholder:text-gray-500"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="absolute right-2 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-90"
+              >
+                <Send size={16} className={isLoading ? "opacity-0" : "ml-0.5"} />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- FLOATING LAUNCHER BUTTON --- */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="group relative flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 hover:scale-110 text-white rounded-[1.2rem] shadow-2xl shadow-blue-600/40 transition-all duration-300 active:scale-95"
+        >
+          {/* Icon */}
+          <MessageCircle size={28} className="fill-white/20" />
+
+          {/* Red Notification Badge */}
+          <span className="absolute -top-1 -right-1 flex h-4 w-4">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 border-2 border-[#0f172a]"></span>
+          </span>
+
+          {/* Tooltip Hover */}
+          <span className="absolute right-full mr-3 bg-white text-[#0f172a] px-2 py-1 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">Tanya AI</span>
+        </button>
+      )}
+    </div>
+  );
+};
+
+export default ChatAssistant;

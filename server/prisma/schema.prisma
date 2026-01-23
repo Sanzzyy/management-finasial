@@ -1,0 +1,61 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL") // Ini AKAN BERHASIL di Prisma v5
+}
+
+// ... (Model User dan Transaction biarkan sama seperti sebelumnya)
+model User {
+  id        Int           @id @default(autoincrement())
+  name      String
+  email     String        @unique
+  password  String
+  createdAt DateTime      @default(now())
+  transactions Transaction[]
+  schedules    Schedule[]
+  goals        Goal[]
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  title       String
+  amount      Float
+  type        Type
+  category    String
+  date        DateTime @default(now())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Schedule {
+  id          Int      @id @default(autoincrement())
+  subject     String
+  time        String
+  room        String
+  type        String
+  day         String
+  isCompleted Boolean  @default(false) // <--- TAMBAH INI
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Goal {
+  id           Int      @id @default(autoincrement())
+  title        String   // Nama Target (e.g. Beli iPhone)
+  targetAmount Float    // Target Uang (e.g. 15.000.000)
+  savedAmount  Float    @default(0) // Uang terkumpul saat ini
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+enum Type {
+  INCOME
+  EXPENSE
+}
