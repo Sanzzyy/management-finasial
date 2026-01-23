@@ -6,7 +6,8 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL") // Ini AKAN BERHASIL di Prisma v5
+  url       = env("POSTGRES_PRISMA_URL") // Koneksi Pooling (Cepat)
+  directUrl = env("POSTGRES_URL_NON_POOLING") // Koneksi Langsung (Untuk Migrasi)
 }
 
 // ... (Model User dan Transaction biarkan sama seperti sebelumnya)
