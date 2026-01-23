@@ -28,6 +28,7 @@ const Login = () => {
         navigate("/dashboard");
       }, 1500);
     } catch (error) {
+      setIsLoading(false);
       if (error.response) {
         setMsg(error.response.data.msg);
       } else {
