@@ -15,7 +15,15 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(cors()); // Supaya frontend (React) bisa akses backend
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", // Untuk Localhost
+      "https://management-smart.vercel.app", // <--- TAMBAHKAN INI (Domain Frontend Kamu)
+    ],
+    credentials: true,
+  }),
+);
 app.use(express.json()); // Supaya backend bisa baca data JSON dari request body
 
 // ROUTES
