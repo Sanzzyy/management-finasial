@@ -47,8 +47,8 @@ const Login = () => {
         {/* Header: Logo & Sapaan */}
         <div className="mb-8 text-center">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl shadow-lg shadow-blue-500/30 mb-4">💎</div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Selamat Datang!</h2>
-          <p className="text-sm text-gray-400 mt-2">Masuk untuk mengelola keuanganmu.</p>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Login</h2>
+          <p className="text-sm text-gray-400 mt-2">Start managing your finances now.</p>
         </div>
 
         {/* Notifikasi Error/Sukses */}
@@ -62,7 +62,7 @@ const Login = () => {
             <input
               type="email"
               className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
-              placeholder="email@kamu.com"
+              placeholder="email@your.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -72,9 +72,6 @@ const Login = () => {
           <div>
             <div className="flex justify-between items-center mb-2 ml-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Password</label>
-              <a href="#" className="text-xs text-blue-500 hover:text-blue-400 transition">
-                Lupa Password?
-              </a>
             </div>
             <input
               type="password"
@@ -105,16 +102,16 @@ const Login = () => {
                 <span>Memproses...</span>
               </div>
             ) : (
-              "Masuk Sekarang"
+              "Login"
             )}
           </button>
         </form>
 
         <div className="mt-8 border-t border-gray-700/50 pt-6 text-center">
           <p className="text-sm text-gray-500">
-            Belum punya akun?{" "}
+            Don't have an account ?{" "}
             <Link to="/register" className="font-bold text-blue-400 hover:text-blue-300 transition hover:underline">
-              Daftar gratis
+              Register for free
             </Link>
           </p>
         </div>

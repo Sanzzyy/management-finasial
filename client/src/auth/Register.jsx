@@ -50,8 +50,8 @@ const Register = () => {
         {/* Header: Logo & Judul */}
         <div className="mb-8 text-center">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl shadow-lg shadow-blue-500/30 mb-4">💎</div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Buat Akun Baru</h2>
-          <p className="text-sm text-gray-400 mt-2">Mulai atur keuanganmu sekarang.</p>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Register</h2>
+          <p className="text-sm text-gray-400 mt-2">Create Account.</p>
         </div>
 
         {/* Notifikasi Error/Sukses */}
@@ -63,11 +63,11 @@ const Register = () => {
 
         <form onSubmit={handleRegister} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Nama Lengkap</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Your Name</label>
             <input
               type="text"
               className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition disabled:opacity-50"
-              placeholder="Contoh: Sajid Izzulhaq"
+              placeholder="Contoh: Syzen"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isLoading} // Input juga dimatikan saat loading
@@ -80,7 +80,7 @@ const Register = () => {
             <input
               type="email"
               className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition disabled:opacity-50"
-              placeholder="email@kamu.com"
+              placeholder="email@your.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
@@ -106,7 +106,7 @@ const Register = () => {
             type="submit"
             disabled={isLoading}
             className={`w-full rounded-xl py-3.5 font-bold text-white shadow-lg transition-all transform 
-              ${isLoading ? "bg-gray-600 cursor-not-allowed opacity-80" : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/50 hover:scale-[1.02] active:scale-95 shadow-blue-500/30"}`}
+              ${isLoading ? "bg-gray-500 cursor-not-allowed opacity-70" : "bg-blue-600 hover:bg-blue-500 hover:shadow-lg active:scale-95"}`}
           >
             {isLoading ? (
               <div className="flex items-center justify-center gap-2">
@@ -117,15 +117,15 @@ const Register = () => {
                 <span>Mendaftarkan...</span>
               </div>
             ) : (
-              "Daftar Sekarang"
+              "Register Now"
             )}
           </button>
         </form>
 
         <p className="mt-8 text-center text-sm text-gray-500">
-          Sudah punya akun?{" "}
+          Already have an account?{" "}
           <Link to="/login" className={`font-bold text-blue-400 hover:text-blue-300 transition hover:underline ${isLoading ? "pointer-events-none opacity-50" : ""}`}>
-            Login disini
+            Login here
           </Link>
         </p>
       </div>
