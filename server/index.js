@@ -2,10 +2,11 @@
 const cors = require("cors");
 const dotenv = require("dotenv");
 const express = require("express");
-const helmet = require("helmet");
-const compression = require("compression");
 
-// Routes
+// Hapus import helmet & compression (Penyebab Crash jika belum diinstall)
+// const helmet = require("helmet");
+// const compression = require("compression");
+
 const authRoutes = require("./routes/authRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
@@ -13,13 +14,11 @@ const goalRoutes = require("./routes/goalRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const budgetRoutes = require("./routes/budgetRoutes");
 
-// Load env variables
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// --- 1. CORS MIDDLEWARE ---
+// --- 1. SETTING CORS FIX ---
 app.use(
   cors({
     origin: "https://management-smart.vercel.app", // HARUS SAMA PERSIS
@@ -29,8 +28,7 @@ app.use(
   }),
 );
 
-// --- 2. MANUAL OPTIONS HANDLER (PENTING BUAT VERCEL) ---
-// Ini memaksa backend menjawab "OK" saat browser tanya "Boleh masuk gak?"
+// --- 2. PREFLIGHT HANDLER (Obat Manjur Vercel) ---
 app.options("*", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "https://management-smart.vercel.app");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -39,17 +37,13 @@ app.options("*", (req, res) => {
   res.sendStatus(200);
 });
 
-// --- 3. SECURITY & PERFORMANCE ---
-// Update Helmet supaya gak bentrok sama CORS
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  }),
-);
-app.use(compression());
+// Hapus middleware helmet & compression
+// app.use(helmet(...));
+// app.use(compression());
+
 app.use(express.json());
 
-// --- 4. ROUTES ---
+// --- 3. ROUTES ---
 app.use("/api/auth", authRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/schedules", scheduleRoutes);
@@ -57,12 +51,10 @@ app.use("/api/goals", goalRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/budget", budgetRoutes);
 
-// Test Route
 app.get("/", (req, res) => {
-  res.send("Halo Sajid! Server Backend Money Manager sudah aktif 🚀");
+  res.send("Server Backend Money Manager Aktif! 🚀");
 });
 
-// Jalankan Server (Vercel Friendly)
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
