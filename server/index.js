@@ -22,7 +22,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // Untuk Localhost
-      "https://management-smart.vercel.app/api", // <--- TAMBAHKAN INI (Domain Frontend Kamu)
+      "https://management-smart.vercel.app", // <--- TAMBAHKAN INI (Domain Frontend Kamu)
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"], // Method yang diizinkan
