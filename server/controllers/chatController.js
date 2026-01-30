@@ -1,5 +1,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { PrismaClient } = require("@prisma/client");
+
+// Load Env
 require("dotenv").config();
 
 const prisma = new PrismaClient();
@@ -7,47 +9,56 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const chatWithAI = async (req, res) => {
   try {
-    const { message, userId } = req.body;
+    const { message } = req.body;
+    const userId = req.user.id; // AMBIL DARI TOKEN (Middleware)
 
-    // 1. Ambil Data Keuangan User (Untuk Konteks)
+    // 1. Ambil Data Keuangan User (Biar AI gak halusinasi)
     const transactions = await prisma.transaction.findMany({
-      where: { userId: parseInt(userId) },
+      where: { userId: userId },
+      orderBy: { date: "desc" },
+      take: 10, // Ambil 10 transaksi terakhir sebagai konteks
+    });
+
+    const budgets = await prisma.budget.findMany({
+      where: { userId: userId },
     });
 
     // Hitung ringkasan sederhana
-    const income = transactions.filter((t) => t.type === "INCOME").reduce((acc, curr) => acc + curr.amount, 0);
-    const expense = transactions.filter((t) => t.type === "EXPENSE").reduce((acc, curr) => acc + curr.amount, 0);
-    const balance = income - expense;
+    const totalIncome = transactions.filter((t) => t.type === "INCOME").reduce((sum, t) => sum + t.amount, 0);
+    const totalExpense = transactions.filter((t) => t.type === "EXPENSE").reduce((sum, t) => sum + t.amount, 0);
+    const balance = totalIncome - totalExpense;
 
-    // 2. Siapkan Prompt untuk AI
-    // Kita kasih tahu AI siapa dia dan data user saat ini
-    const systemPrompt = `
-      Kamu adalah asisten keuangan pribadi yang ramah dan pintar untuk aplikasi "DompetPintar".
+    // 2. Susun Prompt untuk AI (Context Injection)
+    const contextPrompt = `
+      Kamu adalah FinBot, asisten keuangan pribadi yang ramah dan bijak.
       
       DATA KEUANGAN USER SAAT INI:
-      - Total Pemasukan: Rp ${income.toLocaleString("id-ID")}
-      - Total Pengeluaran: Rp ${expense.toLocaleString("id-ID")}
       - Sisa Saldo: Rp ${balance.toLocaleString("id-ID")}
-      
-      TUGAS KAMU:
-      - Jawab pertanyaan user berdasarkan data di atas jika relevan.
-      - Berikan saran keuangan yang singkat, padat, dan memotivasi.
-      - Gunakan bahasa Indonesia yang santai dan gaul tapi sopan.
-      - Jangan terlalu panjang lebar, maksimal 3-4 kalimat saja per jawaban.
-      
+      - Total Pemasukan (Sample): Rp ${totalIncome.toLocaleString("id-ID")}
+      - Total Pengeluaran (Sample): Rp ${totalExpense.toLocaleString("id-ID")}
+      - Transaksi Terakhir: ${JSON.stringify(transactions.map((t) => `${t.title} (${t.amount})`))}
+      - Budget Aktif: ${JSON.stringify(budgets.map((b) => b.category))}
+
       PERTANYAAN USER: "${message}"
+
+      INSTRUKSI:
+      - Jawablah berdasarkan data di atas jika relevan.
+      - Berikan saran keuangan yang praktis, singkat, dan memotivasi.
+      - Gunakan bahasa Indonesia yang santai tapi sopan.
+      - Jika data kosong, ajak user untuk mulai mencatat transaksi.
     `;
 
-    // 3. Kirim ke Gemini
+    // 3. Panggil Gemini AI
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await model.generateContent(systemPrompt);
+    const result = await model.generateContent(contextPrompt);
     const response = await result.response;
     const text = response.text();
 
+    // 4. Kirim Balasan
     res.json({ reply: text });
   } catch (error) {
     console.error("AI Error:", error);
-    res.status(500).json({ reply: "Maaf, otakku lagi loading nih. Coba tanya lagi nanti ya! 🤖" });
+    res.status(500).json({ msg: "Maaf, FinBot lagi error sistem.", error: error.message });
   }
 };
 

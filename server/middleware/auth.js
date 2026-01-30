@@ -1,25 +1,26 @@
-// server/middleware/auth.js
 const jwt = require("jsonwebtoken");
 
 const verifyToken = (req, res, next) => {
-  // 1. Ambil token dari Header (Authorization: Bearer <token>)
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Ambil kata kedua setelah "Bearer"
+  // 1. Coba ambil token dari Cookie (Prioritas Utama)
+  let token = req.cookies.token;
 
+  // 2. Kalau gak ada di cookie, coba cek Header Authorization (Cadangan)
+  if (!token && req.headers.authorization) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  // 3. Kalau masih gak ada, tolak!
   if (!token) {
-    return res.status(401).json({ error: "Access Denied. No token provided." });
+    return res.status(401).json({ msg: "Akses ditolak, silakan login dulu." });
   }
 
   try {
-    // 2. Verifikasi Token dengan Kunci Rahasia
-    const verified = jwt.verify(token, process.env.JWT_SECRET || "rahasiadapur");
-
-    // 3. Simpan data user (dari token) ke dalam request object
-    req.user = verified;
-
+    // 4. Verifikasi Token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "rahasia_negara_123");
+    req.user = decoded; // Simpan data user (id, email) ke request
     next(); // Lanjut ke Controller
-  } catch (error) {
-    res.status(403).json({ error: "Invalid Token" });
+  } catch (err) {
+    return res.status(401).json({ msg: "Token tidak valid." });
   }
 };
 

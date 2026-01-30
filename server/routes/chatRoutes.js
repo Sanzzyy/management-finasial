@@ -1,7 +1,9 @@
 const express = require("express");
-const { chatWithAI } = require("../controllers/chatController");
 const router = express.Router();
+const { chatWithAI } = require("../controllers/chatController");
+const verifyToken = require("../middleware/authMiddleware"); // Import Middleware
 
-router.post("/", chatWithAI);
+// Tambahkan verifyToken di sini agar rute ini TERPROTEKSI
+router.post("/", verifyToken, chatWithAI);
 
 module.exports = router;
