@@ -25,6 +25,8 @@ app.use(
       "https://management-smart.vercel.app/api", // <--- TAMBAHKAN INI (Domain Frontend Kamu)
     ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"], // Method yang diizinkan
+    allowedHeaders: ["Content-Type", "Authorization"], // Header yang diizinkan
   }),
 );
 app.use(helmet()); // Aktifkan pelindung header
