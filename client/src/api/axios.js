@@ -1,8 +1,10 @@
 import axios from "axios";
 
 // Buat instance axios
+const baseURL = import.meta.env.MODE === "development" ? "/api" : "https://management-finasial-api.vercel.app";
+
 const api = axios.create({
-  baseURL: "https://management-finasial-api.vercel.app/api",
+  baseURL: baseURL,
   withCredentials: true,
 });
 
