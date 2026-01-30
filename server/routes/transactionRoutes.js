@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const transactionController = require("../controllers/transactionController");
-const verifyToken = require("../middleware/auth"); // <--- Import Satpam
+const verifyToken = require("../middleware/authMiddleware"); // <--- Import Satpam
 
 // Pasang verifyToken di tengah
 // Artinya: Cek Token dulu -> Baru boleh masuk Controller

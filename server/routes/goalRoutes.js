@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const goalController = require("../controllers/goalController");
-const verifyToken = require("../middleware/auth");
+const verifyToken = require("../middleware/authMiddleware");
 
 router.get("/", verifyToken, goalController.getGoals); // Hapus /:userId
 router.post("/", verifyToken, goalController.createGoal);
