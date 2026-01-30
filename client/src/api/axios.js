@@ -2,7 +2,8 @@ import axios from "axios";
 
 // Buat instance axios
 const api = axios.create({
-  baseURL: "/api", // Base URL backend (sesuaikan proxy vite)
+  baseURL: "https://management-finasial-api.vercel.app/api",
+  withCredentials: true,
 });
 
 // Interceptor: Setiap kali mau request, selipkan token
