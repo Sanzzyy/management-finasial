@@ -20,15 +20,14 @@ const PORT = process.env.PORT || 5001;
 // Middleware
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173", // Untuk Localhost
-      "https://management-smart.vercel.app", // <--- TAMBAHKAN INI (Domain Frontend Kamu)
-    ],
+    origin: ["http://localhost:5173", "https://management-smart.vercel.app"],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"], // Method yang diizinkan
-    allowedHeaders: ["Content-Type", "Authorization"], // Header yang diizinkan
+    // 👇 TAMBAHKAN "OPTIONS" DISINI
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+
 app.use(helmet()); // Aktifkan pelindung header
 app.use(compression()); // Aktifkan kompresi GZIP
 app.use(express.json()); // Supaya backend bisa baca data JSON dari request body
