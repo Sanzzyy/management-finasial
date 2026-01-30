@@ -45,6 +45,7 @@ import {
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+// Update untuk trigger deploy vercel
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
