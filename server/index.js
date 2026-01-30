@@ -2,48 +2,37 @@
 const cors = require("cors");
 const dotenv = require("dotenv");
 const express = require("express");
-
-// Hapus import helmet & compression (Penyebab Crash jika belum diinstall)
-// const helmet = require("helmet");
-// const compression = require("compression");
-
-const authRoutes = require("./routes/authRoutes");
+const helmet = require("helmet"); // Security
+const compression = require("compression"); // Performance
+const authRoutes = require("./routes/authRoutes"); // <--- Tambahkan ini
 const transactionRoutes = require("./routes/transactionRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 const goalRoutes = require("./routes/goalRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const budgetRoutes = require("./routes/budgetRoutes");
 
+// Load env variables
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// --- 1. SETTING CORS FIX ---
+// Middleware
 app.use(
   cors({
-    origin: "https://management-smart.vercel.app", // HARUS SAMA PERSIS
+    origin: [
+      "http://localhost:5173", // Untuk Localhost
+      "https://management-smart.vercel.app/api", // <--- TAMBAHKAN INI (Domain Frontend Kamu)
+    ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE"], // Method yang diizinkan
+    allowedHeaders: ["Content-Type", "Authorization"], // Header yang diizinkan
   }),
 );
+app.use(helmet()); // Aktifkan pelindung header
+app.use(compression()); // Aktifkan kompresi GZIP
+app.use(express.json()); // Supaya backend bisa baca data JSON dari request body
 
-// --- 2. PREFLIGHT HANDLER (Obat Manjur Vercel) ---
-app.options("*", (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "https://management-smart.vercel.app");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.sendStatus(200);
-});
-
-// Hapus middleware helmet & compression
-// app.use(helmet(...));
-// app.use(compression());
-
-app.use(express.json());
-
-// --- 3. ROUTES ---
+// ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/schedules", scheduleRoutes);
@@ -51,10 +40,13 @@ app.use("/api/goals", goalRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/budget", budgetRoutes);
 
+// Test Route (Cuma buat ngecek server nyala)
 app.get("/", (req, res) => {
-  res.send("Server Backend Money Manager Aktif! 🚀");
+  res.send("Halo Sajid! Server Backend Money Manager sudah aktif 🚀");
 });
 
+// Jalankan Server
+// Hanya jalankan listen jika di local (bukan di Vercel)
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
