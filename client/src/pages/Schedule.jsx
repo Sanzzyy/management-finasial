@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 // Import Lucide Icons
-import { Calendar, Clock, MapPin, BookOpen, Laptop, AlertCircle, Sparkles, CheckCircle, Circle, Trash2, Edit2, Plus, X } from "lucide-react";
+import { Calendar, Clock, MapPin, BookOpen, Laptop, AlertCircle, Sparkles, CheckCircle, Circle, Trash2, Edit2, Plus, X, Loader2 } from "lucide-react";
 
 const Schedule = () => {
   const [user, setUser] = useState(null);
@@ -17,11 +18,13 @@ const Schedule = () => {
   const [subject, setSubject] = useState("");
   const [time, setTime] = useState("");
   const [room, setRoom] = useState("");
-  const [type, setType] = useState("Lecture"); // Default English
+  const [type, setType] = useState("Lecture");
 
   // State Edit Mode
   const [editId, setEditId] = useState(null);
 
+  // --- STATE LOADING BARU ---
+  const [isLoading, setIsLoading] = useState(false);
   const [schedules, setSchedules] = useState([]);
 
   useEffect(() => {
@@ -30,62 +33,97 @@ const Schedule = () => {
       navigate("/login");
     } else {
       const userData = JSON.parse(storedUser);
-      setUser(userData);
-      fetchSchedules(userData.id);
+      // PERBAIKAN 1: Ambil userData.user (karena struktur baru ada tokennya)
+      // Gunakan '|| userData' buat jaga-jaga kalau format lama masih nyangkut
+      setUser(userData.user || userData);
+
+      // PERBAIKAN 2: Panggil fetch tanpa ID (Backend baca token)
+      fetchSchedules();
     }
   }, []);
 
-  const fetchSchedules = async (userId) => {
+  const fetchSchedules = async () => {
     try {
-      const response = await axios.get(`/api/schedules/${userId}`);
+      const response = await api.get("/schedules"); // Backend baca token user
       setSchedules(response.data);
     } catch (error) {
       console.error("Failed to fetch schedules", error);
+      // Opsional: Handle jika token expired
+      if (error.response?.status === 401) navigate("/login");
     }
   };
 
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-  // Helper to map Indonesian days from DB (if existing data) to English UI
-  // Note: For new data, we save in English.
-  // Ideally, you should migrate old data or just handle display logic.
-
-  // --- LOGIC CREATE / UPDATE ---
+  // --- HANDLER: CREATE / UPDATE ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) return;
 
+    // 1. Mulai Loading
+    setIsLoading(true);
+
     try {
       if (editId) {
         // --- UPDATE MODE ---
-        await axios.put(`/api/schedules/${editId}`, {
+        await api.put(`/schedules/${editId}`, {
           subject,
           time,
           room,
           type,
           day: activeDay,
         });
+
+        Swal.fire({
+          icon: "success",
+          title: "Schedule Updated!",
+          text: "Your class details have been updated.",
+          background: "#1e293b",
+          color: "#fff",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+
         setEditId(null);
       } else {
         // --- CREATE MODE ---
-        await axios.post("/api/schedules", {
+        await api.post("/schedules", {
           subject,
           time,
           room,
           type,
           day: activeDay,
-          userId: user.id,
+          // PERBAIKAN 3: Hapus userId: user.id (Backend ambil dari Token)
+        });
+
+        Swal.fire({
+          icon: "success",
+          title: "Schedule Added!",
+          text: `${subject} has been added to ${activeDay}.`,
+          background: "#1e293b",
+          color: "#fff",
+          timer: 1500,
+          showConfirmButton: false,
         });
       }
 
-      // Reset Form
+      // Reset Form & Refresh Data
       setSubject("");
       setTime("");
       setRoom("");
       setType("Lecture");
-      fetchSchedules(user.id);
+      await fetchSchedules(); // Refresh tanpa ID
     } catch (error) {
-      alert("Failed to save schedule");
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Failed to save schedule.",
+        background: "#1e293b",
+        color: "#fff",
+      });
+    } finally {
+      // 2. Stop Loading
+      setIsLoading(false);
     }
   };
 
@@ -95,7 +133,14 @@ const Schedule = () => {
     setTime(item.time);
     setRoom(item.room);
     setType(item.type);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Smooth scroll ke form di mobile
+    const formElement = document.getElementById("schedule-form");
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleCancelEdit = () => {
@@ -108,38 +153,73 @@ const Schedule = () => {
 
   const handleToggleComplete = async (item) => {
     try {
-      await axios.put(`/api/schedules/${item.id}`, {
+      // Optimistic UI Update
+      const updatedSchedules = schedules.map((s) => (s.id === item.id ? { ...s, isCompleted: !s.isCompleted } : s));
+      setSchedules(updatedSchedules);
+
+      await api.put(`/schedules/${item.id}`, {
         isCompleted: !item.isCompleted,
       });
-      fetchSchedules(user.id);
+
+      // Fetch ulang untuk memastikan sinkron
+      fetchSchedules();
     } catch (error) {
       console.error("Failed to update status");
+      fetchSchedules(); // Revert kalau gagal
     }
   };
 
+  // --- HANDLER: DELETE (FIXED) ---
   const handleDelete = async (id) => {
-    if (!confirm("Delete this schedule?")) return;
-    try {
-      await axios.delete(`/api/schedules/${id}`);
-      fetchSchedules(user.id);
-    } catch (error) {
-      alert("Failed to delete");
+    const result = await Swal.fire({
+      title: "Delete Schedule?",
+      text: "This action cannot be undone!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#3b82f6",
+      background: "#1e293b",
+      color: "#fff",
+      confirmButtonText: "Yes, delete it!",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // PERBAIKAN 4: Tambahkan ID di URL delete
+        await api.delete(`/schedules/${id}`);
+        await fetchSchedules();
+
+        Swal.fire({
+          icon: "success",
+          title: "Deleted!",
+          text: "Schedule has been removed.",
+          background: "#1e293b",
+          color: "#fff",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Failed to delete schedule.",
+          background: "#1e293b",
+          color: "#fff",
+        });
+      }
     }
   };
 
-  const filteredSchedules = schedules
-    .filter((s) => s.day === activeDay) // Ensure day matches (Monday === Monday)
-    .sort((a, b) => a.time.localeCompare(b.time));
+  const filteredSchedules = schedules.filter((s) => s.day === activeDay).sort((a, b) => a.time.localeCompare(b.time));
 
-  // Helper for Type Icon
   const getTypeIcon = (t) => {
     switch (t) {
       case "Lecture":
         return <BookOpen size={14} />;
       case "Lab":
-        return <Laptop size={14} />; // Praktikum
+        return <Laptop size={14} />;
       case "Exam":
-        return <AlertCircle size={14} />; // Ujian/Deadline
+        return <AlertCircle size={14} />;
       default:
         return <Sparkles size={14} />;
     }
@@ -202,7 +282,6 @@ const Schedule = () => {
                     item.isCompleted ? "bg-[#1e293b]/50 border-gray-800/50 opacity-60 grayscale" : "bg-[#1e293b] border-gray-800 hover:border-blue-500/30"
                   }`}
                 >
-                  {/* Accent Line */}
                   <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${item.type === "Lecture" ? "bg-blue-500" : item.type === "Lab" ? "bg-purple-500" : item.type === "Exam" ? "bg-red-500" : "bg-amber-500"}`}></div>
 
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pl-4 gap-4">
@@ -254,35 +333,35 @@ const Schedule = () => {
           </div>
 
           {/* RIGHT COLUMN: FORM */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1" id="schedule-form">
             <div className={`sticky top-28 rounded-3xl p-6 border shadow-xl transition-all duration-300 ${editId ? "bg-amber-500/10 border-amber-500/30" : "bg-[#1e293b] border-gray-800"}`}>
               <h3 className={`font-bold mb-6 flex items-center gap-2 ${editId ? "text-amber-500" : "text-white"}`}>
                 {editId ? (
                   <>
-                    {" "}
                     <span className="p-1 rounded bg-amber-500 text-white">
                       <Edit2 size={12} />
-                    </span>{" "}
-                    Edit Schedule{" "}
+                    </span>
+                    Edit Schedule
                   </>
                 ) : (
                   <>
-                    {" "}
                     <span className="bg-emerald-500 text-white p-1 rounded">
                       <Plus size={12} />
-                    </span>{" "}
-                    Add Schedule{" "}
+                    </span>
+                    Add Schedule
                   </>
                 )}
               </h3>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Input: Subject */}
                 <div>
                   <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Subject / Activity</label>
                   <input
                     type="text"
+                    disabled={isLoading}
                     placeholder="e.g. Web Programming"
-                    className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
+                    className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     required
@@ -290,22 +369,30 @@ const Schedule = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
+                  {/* Input: Time */}
                   <div>
                     <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Start Time</label>
                     <div className="relative">
                       <input
                         type="time"
-                        className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        disabled={isLoading}
+                        className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                         value={time}
                         onChange={(e) => setTime(e.target.value)}
                         required
                       />
                     </div>
                   </div>
+                  {/* Input: Type */}
                   <div>
                     <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Type</label>
                     <div className="relative">
-                      <select className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none appearance-none" value={type} onChange={(e) => setType(e.target.value)}>
+                      <select
+                        disabled={isLoading}
+                        className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        value={type}
+                        onChange={(e) => setType(e.target.value)}
+                      >
                         <option value="Lecture">Lecture</option>
                         <option value="Lab">Lab</option>
                         <option value="Exam">Exam</option>
@@ -318,13 +405,15 @@ const Schedule = () => {
                   </div>
                 </div>
 
+                {/* Input: Room */}
                 <div>
                   <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Room / Location</label>
                   <div className="relative">
                     <input
                       type="text"
+                      disabled={isLoading}
                       placeholder="e.g. Building A Room 301"
-                      className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
+                      className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       value={room}
                       onChange={(e) => setRoom(e.target.value)}
                       required
@@ -335,16 +424,33 @@ const Schedule = () => {
                   </div>
                 </div>
 
+                {/* BUTTONS GROUP */}
                 <div className="flex gap-2 mt-4">
                   {editId && (
-                    <button type="button" onClick={handleCancelEdit} className="flex-1 rounded-xl bg-gray-700 py-3 font-bold text-gray-300 hover:bg-gray-600 transition flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      className="flex-1 rounded-xl bg-gray-700 py-3 font-bold text-gray-300 hover:bg-gray-600 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <X size={16} /> Cancel
                     </button>
                   )}
+
                   <button
-                    className={`flex-1 rounded-xl py-3 font-bold text-white shadow-lg transition active:scale-95 flex items-center justify-center gap-2 ${editId ? "bg-amber-600 hover:bg-amber-500 shadow-amber-600/20" : "bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"}`}
+                    type="submit"
+                    disabled={isLoading}
+                    className={`flex-1 rounded-xl py-3 font-bold text-white shadow-lg transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      editId ? "bg-amber-600 hover:bg-amber-500 shadow-amber-600/20" : "bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"
+                    }`}
                   >
-                    {editId ? "Update Schedule" : "Save Schedule"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" /> {editId ? "Updating..." : "Saving..."}
+                      </>
+                    ) : (
+                      <>{editId ? "Update Schedule" : "Save Schedule"}</>
+                    )}
                   </button>
                 </div>
               </form>

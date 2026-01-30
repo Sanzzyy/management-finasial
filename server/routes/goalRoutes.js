@@ -1,11 +1,11 @@
 const express = require("express");
-const { getGoals, createGoal, addSaving, deleteGoal } = require("../controllers/goalController");
-
 const router = express.Router();
+const goalController = require("../controllers/goalController");
+const verifyToken = require("../middleware/auth");
 
-router.get("/:userId", getGoals);
-router.post("/", createGoal);
-router.put("/:id/save", addSaving); // Route khusus buat nabung
-router.delete("/:id", deleteGoal);
+router.get("/", verifyToken, goalController.getGoals); // Hapus /:userId
+router.post("/", verifyToken, goalController.createGoal);
+router.put("/:id/save", verifyToken, goalController.addSaving);
+router.delete("/:id", verifyToken, goalController.deleteGoal);
 
 module.exports = router;

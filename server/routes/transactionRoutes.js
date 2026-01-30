@@ -1,13 +1,16 @@
-// server/routes/transactionRoutes.js
 const express = require("express");
-const { getTransactions, createTransaction } = require("../controllers/transactionController");
-
 const router = express.Router();
+const transactionController = require("../controllers/transactionController");
+const verifyToken = require("../middleware/auth"); // <--- Import Satpam
 
-// GET /api/transactions/:userId (Ambil data)
-router.get("/:userId", getTransactions);
+// Pasang verifyToken di tengah
+// Artinya: Cek Token dulu -> Baru boleh masuk Controller
+router.post("/", verifyToken, transactionController.addTransaction);
 
-// POST /api/transactions (Simpan data)
-router.post("/", createTransaction);
+// Ubah route GET (Hapus /:userId karena kita ambil dari token)
+router.get("/", verifyToken, transactionController.getTransactions);
+
+router.delete("/:id", verifyToken, transactionController.deleteTransaction);
+router.put("/:id", verifyToken, transactionController.updateTransaction);
 
 module.exports = router;

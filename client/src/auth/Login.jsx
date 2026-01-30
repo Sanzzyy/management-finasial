@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../api/axios";
 import { WalletMinimal } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -14,13 +14,11 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true); // 1. Kunci tombol saat mulai
     try {
-      const response = await axios.post("/api/auth/login", {
+      const response = await api.post("/auth/login", {
         email,
         password,
       });
-
-      // Simpan data user
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.setItem("user", JSON.stringify(response.data));
 
       setMsg("Login Berhasil! Masuk ke Dashboard...");
 

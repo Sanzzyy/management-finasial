@@ -8,6 +8,7 @@ import Report from "./pages/Report";
 import Navbar from "./components/Navbar";
 import ChatAssistant from "./components/ChatAssistant";
 import Footer from "./components/Footer";
+import NotFound from "./components/NotFound";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/report" element={<Report />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
     </BrowserRouter>

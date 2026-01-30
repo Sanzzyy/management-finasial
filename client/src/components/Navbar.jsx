@@ -107,9 +107,11 @@ const Navbar = () => {
       {/* --- MOBILE TOP BAR (Logo & Profile Only) --- */}
       <div className="md:hidden  fixed top-0 w-full z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-white/5 px-5 py-3 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-lg">💎</div>
+          <div className="h-8 w-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-lg">
+            <WalletMinimalIcon width={20} />
+          </div>
           <span className="font-bold text-white text-sm">
-            Dompet<span className="text-blue-500">Pintar</span>
+            Management<span className="text-blue-500">Smart</span>
           </span>
         </div>
         <div className="flex items-center gap-3" onClick={handleLogout}>

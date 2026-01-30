@@ -1,6 +1,7 @@
 // server/controllers/authController.js
-const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const { PrismaClient } = require("@prisma/client");
 
 // Load env supaya process.env terbaca
 require("dotenv").config();
@@ -51,38 +52,29 @@ const register = async (req, res) => {
 
 // Fitur Login
 const login = async (req, res) => {
+  const { email, password } = req.body;
+
   try {
-    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    // 1. Cari user berdasarkan email
-    const user = await prisma.user.findUnique({
-      where: { email: email },
-    });
-
-    // Jika user tidak ketemu
-    if (!user) {
-      return res.status(404).json({ msg: "Email tidak ditemukan" });
-    }
-
-    // 2. Cek Password (Bandingkan password input vs database)
     const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
-    if (!isMatch) {
-      return res.status(400).json({ msg: "Password salah!" });
-    }
+    // --- BUAT TOKEN ---
+    const token = jwt.sign(
+      { id: user.id, email: user.email }, // Data yang disimpan di dalam token
+      process.env.JWT_SECRET || "rahasia_negara_123", // Gunakan .env nanti
+      { expiresIn: "7d" }, // Token berlaku 7 hari
+    );
 
-    // 3. Login Sukses (Kirim data user tanpa password)
-    res.status(200).json({
-      msg: "Login Berhasil",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
+    // Kirim Token ke Frontend (Jangan kirim password!)
+    res.json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email },
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ msg: "Terjadi kesalahan server" });
+    res.status(500).json({ error: "Login failed" });
   }
 };
 

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 // Import Lucide Icons
-import { Target, Rocket, Plus, DollarSign, Check, X, Trash2, Trophy, PiggyBank, Sparkles } from "lucide-react";
+import { Target, Rocket, Plus, DollarSign, Check, X, Trash2, Trophy, PiggyBank, Sparkles, Loader2 } from "lucide-react";
 
 const Goals = () => {
   const [user, setUser] = useState(null);
@@ -18,7 +19,11 @@ const Goals = () => {
   const [savingAmount, setSavingAmount] = useState("");
   const [activeGoalId, setActiveGoalId] = useState(null);
 
-  // Format Currency (IDR is used for value, but label is English)
+  // --- LOADING STATES ---
+  const [isCreating, setIsCreating] = useState(false); // Loading saat buat goal baru
+  const [isSavingFund, setIsSavingFund] = useState(false); // Loading saat nabung
+
+  // Format Currency
   const formatCurrency = (number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -44,57 +49,167 @@ const Goals = () => {
     }
   }, []);
 
-  const fetchGoals = async (userId) => {
+  const fetchGoals = async () => {
     try {
-      const response = await axios.get(`/api/goals/${userId}`);
+      const response = await api.get("/goals");
       setGoals(response.data);
     } catch (error) {
       console.error("Failed to fetch goals", error);
     }
   };
 
+  // --- HANDLE CREATE GOAL ---
   const handleCreateGoal = async (e) => {
     e.preventDefault();
     if (!user) return;
+
+    // Validasi sederhana
+    if (!title || !targetAmount) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Data",
+        text: "Please fill in the goal name and target amount!",
+        background: "#1e293b",
+        color: "#fff",
+      });
+      return;
+    }
+
+    setIsCreating(true); // Start Loading
     const cleanAmount = parseFloat(targetAmount.replaceAll(".", ""));
 
     try {
-      await axios.post("/api/goals", {
+      await api.post("/goals", {
         title,
         targetAmount: cleanAmount,
-        userId: user.id,
       });
+
+      // Reset & Refresh
       setTitle("");
       setTargetAmount("");
-      fetchGoals(user.id);
+      await fetchGoals();
+
+      // Success Alert
+      Swal.fire({
+        icon: "success",
+        title: "Goal Set! 🚀",
+        text: `Let's work hard to get that ${title}!`,
+        background: "#1e293b",
+        color: "#fff",
+        timer: 2000,
+        showConfirmButton: false,
+      });
     } catch (error) {
-      alert("Failed to create goal");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to create goal.",
+        background: "#1e293b",
+        color: "#fff",
+      });
+    } finally {
+      setIsCreating(false); // Stop Loading
     }
   };
 
+  // --- HANDLE ADD SAVING (NABUNG) ---
   const handleAddSaving = async (e) => {
     e.preventDefault();
+
+    if (!savingAmount) return;
+
+    setIsSavingFund(true); // Start Loading
     const cleanAmount = parseFloat(savingAmount.replaceAll(".", ""));
 
     try {
-      await axios.put(`/api/goals/${activeGoalId}/save`, {
+      await api.put(`/goals/${activeGoalId}/save`, {
         amount: cleanAmount,
       });
+
+      // Cek apakah goal ini sekarang lunas/selesai? (Logic opsional untuk efek wow)
+      const currentGoal = goals.find((g) => g.id === activeGoalId);
+      const isCompletedNow = currentGoal.savedAmount + cleanAmount >= currentGoal.targetAmount;
+
+      if (isCompletedNow) {
+        Swal.fire({
+          icon: "success",
+          title: "CONGRATULATIONS! 🏆",
+          text: `You finally achieved: ${currentGoal.title}!`,
+          background: "#1e293b",
+          color: "#fff",
+          confirmButtonColor: "#10b981", // Green
+          confirmButtonText: "Awesome!",
+        });
+      } else {
+        // Toast kecil kalau cuma nambah tabungan biasa
+        const Toast = Swal.mixin({
+          toast: true,
+          position: "top-end",
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+          background: "#1e293b",
+          color: "#fff",
+        });
+        Toast.fire({
+          icon: "success",
+          title: "Savings added successfully!",
+        });
+      }
+
       setSavingAmount("");
       setActiveGoalId(null);
-      fetchGoals(user.id);
+      await fetchGoals(user.id);
     } catch (error) {
-      alert("Failed to save money");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to save money.",
+        background: "#1e293b",
+        color: "#fff",
+      });
+    } finally {
+      setIsSavingFund(false); // Stop Loading
     }
   };
 
+  // --- HANDLE DELETE ---
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this goal?")) return;
-    try {
-      await axios.delete(`/api/goals/${id}`);
-      fetchGoals(user.id);
-    } catch (error) {
-      alert("Failed to delete");
+    const result = await Swal.fire({
+      title: "Give up on this dream?",
+      text: "This goal will be deleted permanently.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#3b82f6",
+      confirmButtonText: "Yes, delete it",
+      background: "#1e293b",
+      color: "#fff",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.delete(`/goals/${id}`);
+        await fetchGoals(user.id);
+
+        Swal.fire({
+          icon: "success",
+          title: "Deleted",
+          text: "Goal has been removed.",
+          background: "#1e293b",
+          color: "#fff",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Failed to delete goal.",
+          background: "#1e293b",
+          color: "#fff",
+        });
+      }
     }
   };
 
@@ -126,8 +241,9 @@ const Goals = () => {
               <div className="relative">
                 <input
                   type="text"
+                  disabled={isCreating}
                   placeholder="e.g. New Gaming Laptop"
-                  className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition pl-10"
+                  className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition pl-10 disabled:opacity-50 disabled:cursor-not-allowed"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
@@ -144,8 +260,9 @@ const Goals = () => {
               <div className="relative">
                 <input
                   type="text"
+                  disabled={isCreating}
                   placeholder="0"
-                  className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition font-bold pl-10"
+                  className="w-full rounded-xl bg-[#0f172a] border border-gray-700 px-4 py-3 text-sm text-white focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition font-bold pl-10 disabled:opacity-50 disabled:cursor-not-allowed"
                   value={targetAmount}
                   onChange={(e) => handleAmountChange(e, setTargetAmount)}
                   required
@@ -158,8 +275,20 @@ const Goals = () => {
 
             {/* Save Button (2 cols) */}
             <div className="md:col-span-2">
-              <button className="w-full rounded-xl bg-purple-600 py-3 font-bold text-white shadow-lg shadow-purple-600/20 hover:bg-purple-500 transition active:scale-95 h-[46px] flex items-center justify-center gap-2">
-                <Sparkles size={16} /> Save
+              <button
+                type="submit"
+                disabled={isCreating}
+                className="w-full rounded-xl bg-purple-600 py-3 font-bold text-white shadow-lg shadow-purple-600/20 hover:bg-purple-500 transition active:scale-95 h-[46px] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} /> Save
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -188,7 +317,9 @@ const Goals = () => {
                       </h3>
                       <p className="text-xs text-gray-400 mt-1">Target: {formatCurrency(goal.targetAmount)}</p>
                     </div>
-                    <div className={`flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-full text-[10px] font-bold ${percentage >= 100 ? "bg-emerald-500 text-white" : "bg-[#0f172a] text-white border border-gray-700"}`}>
+                    <div
+                      className={`flex-shrink-0 h-9 w-9 flex items-center justify-center rounded-full text-[10px] font-bold ${percentage >= 100 ? "bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-[#0f172a] text-white border border-gray-700"}`}
+                    >
                       {percentage}%
                     </div>
                   </div>
@@ -200,7 +331,7 @@ const Goals = () => {
                     </div>
                     <div className="flex justify-between mt-2 text-xs">
                       <span className="text-gray-400">Collected</span>
-                      <span className="font-bold text-white">{formatCurrency(goal.savedAmount)}</span>
+                      <span className={`font-bold ${percentage >= 100 ? "text-emerald-400" : "text-white"}`}>{formatCurrency(goal.savedAmount)}</span>
                     </div>
                   </div>
 
@@ -212,14 +343,19 @@ const Goals = () => {
                           type="text"
                           placeholder="Rp..."
                           autoFocus
-                          className="w-full bg-[#0f172a] rounded-lg px-3 py-2 text-xs text-white border border-gray-700 focus:outline-none focus:border-purple-500"
+                          disabled={isSavingFund}
+                          className="w-full bg-[#0f172a] rounded-lg px-3 py-2 text-xs text-white border border-gray-700 focus:outline-none focus:border-purple-500 disabled:opacity-50"
                           value={savingAmount}
                           onChange={(e) => handleAmountChange(e, setSavingAmount)}
                         />
-                        <button onClick={handleAddSaving} className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-1 text-xs font-bold flex items-center justify-center">
-                          <Check size={14} />
+                        <button
+                          onClick={handleAddSaving}
+                          disabled={isSavingFund}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-1 text-xs font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-10"
+                        >
+                          {isSavingFund ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                         </button>
-                        <button onClick={() => setActiveGoalId(null)} className="bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-3 py-1 text-xs flex items-center justify-center">
+                        <button onClick={() => !isSavingFund && setActiveGoalId(null)} className="bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-3 py-1 text-xs flex items-center justify-center disabled:opacity-50">
                           <X size={14} />
                         </button>
                       </div>
@@ -228,7 +364,7 @@ const Goals = () => {
                         <button
                           onClick={() => setActiveGoalId(goal.id)}
                           disabled={percentage >= 100}
-                          className={`flex-1 rounded-xl py-2 text-xs font-bold transition flex items-center justify-center gap-2 ${percentage >= 100 ? "bg-gray-800 text-gray-500 cursor-not-allowed" : "bg-white/5 hover:bg-white/10 text-white"}`}
+                          className={`flex-1 rounded-xl py-2 text-xs font-bold transition flex items-center justify-center gap-2 ${percentage >= 100 ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default" : "bg-white/5 hover:bg-white/10 text-white"}`}
                         >
                           {percentage >= 100 ? (
                             <>

@@ -1,6 +1,14 @@
 import { Heart, Github, Instagram, Linkedin, Coffee, ExternalLink, WalletMinimal } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const Footer = () => {
+  const location = useLocation();
+  const hideFooterPath = ["/register", "/login"];
+
+  if (hideFooterPath.includes(location.pathname)) {
+    return null;
+  }
+
   return (
     <footer className="w-full bg-[#0f172a] border-t border-white/5 pt-10 pb-8 mt-auto">
       <div className="mx-auto max-w-7xl px-6">

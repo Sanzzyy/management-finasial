@@ -1,12 +1,15 @@
 // server/index.js
-const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const express = require("express");
+const helmet = require("helmet"); // Security
+const compression = require("compression"); // Performance
 const authRoutes = require("./routes/authRoutes"); // <--- Tambahkan ini
 const transactionRoutes = require("./routes/transactionRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 const goalRoutes = require("./routes/goalRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const budgetRoutes = require("./routes/budgetRoutes");
 
 // Load env variables
 dotenv.config();
@@ -24,6 +27,8 @@ app.use(
     credentials: true,
   }),
 );
+app.use(helmet()); // Aktifkan pelindung header
+app.use(compression()); // Aktifkan kompresi GZIP
 app.use(express.json()); // Supaya backend bisa baca data JSON dari request body
 
 // ROUTES
@@ -32,6 +37,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/schedules", scheduleRoutes);
 app.use("/api/goals", goalRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/budget", budgetRoutes);
 
 // Test Route (Cuma buat ngecek server nyala)
 app.get("/", (req, res) => {

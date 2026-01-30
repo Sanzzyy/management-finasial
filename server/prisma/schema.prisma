@@ -19,6 +19,7 @@ model User {
   transactions Transaction[]
   schedules    Schedule[]
   goals        Goal[]
+  budgets      Budget[]
 }
 
 model Transaction {
@@ -27,6 +28,7 @@ model Transaction {
   amount      Float
   type        Type
   category    String
+  priority    String   @default("NEED")
   date        DateTime @default(now())
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
@@ -53,6 +55,19 @@ model Goal {
   userId       Int
   user         User     @relation(fields: [userId], references: [id])
   createdAt    DateTime @default(now())
+}
+
+model Budget {
+  id        Int      @id @default(autoincrement())
+  category  String   // Contoh: "Food", "Transport"
+  limit     Float    // Batas maksimal (Contoh: 500000)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Biar satu user cuma punya satu budget per kategori (opsional tapi bagus)
+  @@unique([userId, category]) 
 }
 
 enum Type {
