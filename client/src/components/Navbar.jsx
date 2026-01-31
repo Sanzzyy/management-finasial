@@ -54,7 +54,7 @@ const Navbar = () => {
             </div>
             <div className="block">
               <h1 className="text-lg font-bold leading-none text-white tracking-wide font-sans">
-                Management<span className="text-blue-500">Smart</span>
+                Management<span className="text-blue-500">Syzen</span>
               </h1>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-0.5">Premium Manager</p>
             </div>
@@ -111,7 +111,7 @@ const Navbar = () => {
             <WalletMinimalIcon width={20} />
           </div>
           <span className="font-bold text-white text-sm">
-            Management<span className="text-blue-500">Smart</span>
+            Management<span className="text-blue-500">Syzen</span>
           </span>
         </div>
         <div className="flex items-center gap-3" onClick={handleLogout}>
