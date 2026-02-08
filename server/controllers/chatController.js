@@ -1,64 +1,81 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { PrismaClient } = require("@prisma/client");
 
-// Load Env
-require("dotenv").config();
-
 const prisma = new PrismaClient();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const chatWithAI = async (req, res) => {
+  const { message } = req.body;
+
+  // Guard clause login
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ reply: "Sesi habis." });
+  }
+
+  const userId = req.user.id;
+
   try {
-    const { message } = req.body;
-    const userId = req.user.id; // AMBIL DARI TOKEN (Middleware)
+    // 1. CEK MANUAL (REGEX)
+    // Biar hemat kuota kalau cuma sapaan
+    const sapaanRegex = /^(halo|hai|hi|hello|pagi|siang|sore|malam|test|tes|cek|p)\b/i;
+    const userName = req.user.name || "Teman";
+    const cleanMessage = message ? message.trim() : "";
 
-    // 1. Ambil Data Keuangan User (Biar AI gak halusinasi)
+    if (!cleanMessage || sapaanRegex.test(cleanMessage)) {
+      return res.json({
+        reply: `Halo ${userName}! 👋 Ada yang bisa FinBot bantu curhatin soal uang hari ini?`,
+      });
+    }
+
+    // 2. AMBIL DATA
     const transactions = await prisma.transaction.findMany({
-      where: { userId: userId },
+      where: { userId },
+      select: { title: true, amount: true, type: true, category: true, date: true },
       orderBy: { date: "desc" },
-      take: 10, // Ambil 10 transaksi terakhir sebagai konteks
+      take: 5,
     });
 
-    const budgets = await prisma.budget.findMany({
-      where: { userId: userId },
-    });
+    const dataStatus = transactions.length === 0 ? "BELUM ADA DATA TRANSAKSI." : JSON.stringify(transactions);
 
-    // Hitung ringkasan sederhana
-    const totalIncome = transactions.filter((t) => t.type === "INCOME").reduce((sum, t) => sum + t.amount, 0);
-    const totalExpense = transactions.filter((t) => t.type === "EXPENSE").reduce((sum, t) => sum + t.amount, 0);
-    const balance = totalIncome - totalExpense;
+    // 3. SYSTEM PROMPT (VERSI NATURAL & NO MARKDOWN)
+    const systemPrompt = `
+    PERAN: Kamu adalah "FinBot", teman asisten keuangan yang asik, suportif, dan gaul.
+    USER: ${userName}
+    DATA KEUANGAN: ${dataStatus}
 
-    // 2. Susun Prompt untuk AI (Context Injection)
-    const contextPrompt = `
-      Kamu adalah FinBot, asisten keuangan pribadi yang ramah dan bijak.
-      
-      DATA KEUANGAN USER SAAT INI:
-      - Sisa Saldo: Rp ${balance.toLocaleString("id-ID")}
-      - Total Pemasukan (Sample): Rp ${totalIncome.toLocaleString("id-ID")}
-      - Total Pengeluaran (Sample): Rp ${totalExpense.toLocaleString("id-ID")}
-      - Transaksi Terakhir: ${JSON.stringify(transactions.map((t) => `${t.title} (${t.amount})`))}
-      - Budget Aktif: ${JSON.stringify(budgets.map((b) => b.category))}
+    ATURAN FORMATTING (PENTING BIAR RAPI):
+    1. **JANGAN PAKAI MARKDOWN**: Jangan gunakan tanda bintang (*) atau pagar (#). Teks harus bersih.
+    2. **GANTI BULLET POINT DENGAN EMOJI**: Gunakan emoji seperti 💰, 💸, 👉, ✅ untuk membuat list.
+    3. **GAYA BAHASA**: Santai, friendly, seperti chat sama teman akrab. Jangan kaku.
 
-      PERTANYAAN USER: "${message}"
+    CONTOH JAWABAN YANG DIMAU:
+    "Oke, ini laporannya ya!
+    💰 Pemasukan kamu: Rp 100.000 (dari Uang Jajan)
+    💸 Pengeluaran: Rp 0
+    ✅ Jadi sisa saldo kamu: Rp 100.000.
+    
+    Masih aman banget nih! Yuk jajan dikit tapi tetap catat ya! 😉"
 
-      INSTRUKSI:
-      - Jawablah berdasarkan data di atas jika relevan.
-      - Berikan saran keuangan yang praktis, singkat, dan memotivasi.
-      - Gunakan bahasa Indonesia yang santai tapi sopan.
-      - Jika data kosong, ajak user untuk mulai mencatat transaksi.
+    INSTRUKSI RESPON:
+    - Jika user tanya "Analisa" atau "Saran": Berikan rangkuman pakai Emoji seperti contoh di atas.
+    - Jika user tanya "Total": Langsung jawab angkanya dengan santai.
+    - Jika data KOSONG: Ajak user input dengan semangat.
+
+    PERTANYAAN USER: "${cleanMessage}"
+    JAWABAN FINBOT:
     `;
 
-    // 3. Panggil Gemini AI
+    // Kita pakai model 1.5-flash biar kuota aman & cepat
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await model.generateContent(contextPrompt);
+
+    const result = await model.generateContent(systemPrompt);
     const response = await result.response;
     const text = response.text();
 
-    // 4. Kirim Balasan
     res.json({ reply: text });
   } catch (error) {
     console.error("AI Error:", error);
-    res.status(500).json({ msg: "Maaf, FinBot lagi error sistem.", error: error.message });
+    res.status(500).json({ reply: "Aduh, FinBot lagi pusing nih. Tanya lagi nanti ya! 🤕" });
   }
 };
 
