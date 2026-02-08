@@ -23,8 +23,9 @@ const Schedule = () => {
   // State Edit Mode
   const [editId, setEditId] = useState(null);
 
-  // --- STATE LOADING BARU ---
-  const [isLoading, setIsLoading] = useState(false);
+  // --- STATE LOADING ---
+  const [isLoading, setIsLoading] = useState(false); // Untuk proses Submit/Edit
+  const [isFetching, setIsFetching] = useState(true); // KHUSUS untuk Load Data Awal
   const [schedules, setSchedules] = useState([]);
 
   useEffect(() => {
@@ -33,23 +34,23 @@ const Schedule = () => {
       navigate("/login");
     } else {
       const userData = JSON.parse(storedUser);
-      // PERBAIKAN 1: Ambil userData.user (karena struktur baru ada tokennya)
-      // Gunakan '|| userData' buat jaga-jaga kalau format lama masih nyangkut
       setUser(userData.user || userData);
-
-      // PERBAIKAN 2: Panggil fetch tanpa ID (Backend baca token)
       fetchSchedules();
     }
   }, []);
 
   const fetchSchedules = async () => {
+    // Set fetching true saat mulai ambil data
+    setIsFetching(true);
     try {
-      const response = await api.get("/schedules"); // Backend baca token user
+      const response = await api.get("/schedules");
       setSchedules(response.data);
     } catch (error) {
       console.error("Failed to fetch schedules", error);
-      // Opsional: Handle jika token expired
       if (error.response?.status === 401) navigate("/login");
+    } finally {
+      // Selesai loading (sukses/gagal), matikan loading
+      setIsFetching(false);
     }
   };
 
@@ -60,8 +61,7 @@ const Schedule = () => {
     e.preventDefault();
     if (!user) return;
 
-    // 1. Mulai Loading
-    setIsLoading(true);
+    setIsLoading(true); // Loading tombol simpan
 
     try {
       if (editId) {
@@ -93,7 +93,6 @@ const Schedule = () => {
           room,
           type,
           day: activeDay,
-          // PERBAIKAN 3: Hapus userId: user.id (Backend ambil dari Token)
         });
 
         Swal.fire({
@@ -112,7 +111,7 @@ const Schedule = () => {
       setTime("");
       setRoom("");
       setType("Lecture");
-      await fetchSchedules(); // Refresh tanpa ID
+      await fetchSchedules();
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -122,7 +121,6 @@ const Schedule = () => {
         color: "#fff",
       });
     } finally {
-      // 2. Stop Loading
       setIsLoading(false);
     }
   };
@@ -134,7 +132,6 @@ const Schedule = () => {
     setRoom(item.room);
     setType(item.type);
 
-    // Smooth scroll ke form di mobile
     const formElement = document.getElementById("schedule-form");
     if (formElement) {
       formElement.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -153,23 +150,19 @@ const Schedule = () => {
 
   const handleToggleComplete = async (item) => {
     try {
-      // Optimistic UI Update
       const updatedSchedules = schedules.map((s) => (s.id === item.id ? { ...s, isCompleted: !s.isCompleted } : s));
       setSchedules(updatedSchedules);
 
       await api.put(`/schedules/${item.id}`, {
         isCompleted: !item.isCompleted,
       });
-
-      // Fetch ulang untuk memastikan sinkron
       fetchSchedules();
     } catch (error) {
       console.error("Failed to update status");
-      fetchSchedules(); // Revert kalau gagal
+      fetchSchedules();
     }
   };
 
-  // --- HANDLER: DELETE (FIXED) ---
   const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: "Delete Schedule?",
@@ -185,7 +178,6 @@ const Schedule = () => {
 
     if (result.isConfirmed) {
       try {
-        // PERBAIKAN 4: Tambahkan ID di URL delete
         await api.delete(`/schedules/${id}`);
         await fetchSchedules();
 
@@ -224,6 +216,22 @@ const Schedule = () => {
         return <Sparkles size={14} />;
     }
   };
+
+  // --- COMPONENT: SKELETON LOADER ---
+  const ScheduleSkeleton = () => (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="animate-pulse bg-[#1e293b] border border-gray-800 rounded-2xl p-5 h-[100px] flex items-center gap-4">
+          <div className="w-1.5 h-full bg-gray-700 rounded"></div>
+          <div className="flex-1 space-y-3">
+            <div className="h-4 bg-gray-700 rounded w-1/4"></div>
+            <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+          </div>
+          <div className="h-8 w-8 bg-gray-700 rounded-lg"></div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#0f172a] font-sans text-gray-100 pb-28 pt-20 md:pt-0">
@@ -266,8 +274,13 @@ const Schedule = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT COLUMN: LIST SCHEDULES */}
           <div className="lg:col-span-2 space-y-4">
-            {filteredSchedules.length === 0 ? (
-              <div className="rounded-3xl bg-[#1e293b] border border-gray-800 p-12 text-center flex flex-col items-center justify-center border-dashed min-h-[300px]">
+            {/* LOGIKA DISPLAY: Fetching -> Empty -> List */}
+            {isFetching ? (
+              // TAMPILKAN SKELETON SAAT LOADING
+              <ScheduleSkeleton />
+            ) : filteredSchedules.length === 0 ? (
+              // TAMPILKAN EMPTY STATE JIKA DATA KOSONG (SETELAH FETCHING)
+              <div className="rounded-3xl bg-[#1e293b] border border-gray-800 p-12 text-center flex flex-col items-center justify-center border-dashed min-h-[300px] animate-in fade-in zoom-in duration-300">
                 <div className="bg-gray-800/50 p-4 rounded-full mb-4">
                   <Calendar size={32} className="text-gray-500 opacity-50" />
                 </div>
@@ -275,10 +288,11 @@ const Schedule = () => {
                 <p className="text-gray-500 text-sm mt-1">Enjoy your free time!</p>
               </div>
             ) : (
+              // TAMPILKAN DATA ASLI
               filteredSchedules.map((item) => (
                 <div
                   key={item.id}
-                  className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 ${
+                  className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 animate-in slide-in-from-bottom-2 ${
                     item.isCompleted ? "bg-[#1e293b]/50 border-gray-800/50 opacity-60 grayscale" : "bg-[#1e293b] border-gray-800 hover:border-blue-500/30"
                   }`}
                 >
@@ -332,7 +346,7 @@ const Schedule = () => {
             )}
           </div>
 
-          {/* RIGHT COLUMN: FORM */}
+          {/* RIGHT COLUMN: FORM (Tidak berubah) */}
           <div className="lg:col-span-1" id="schedule-form">
             <div className={`sticky top-28 rounded-3xl p-6 border shadow-xl transition-all duration-300 ${editId ? "bg-amber-500/10 border-amber-500/30" : "bg-[#1e293b] border-gray-800"}`}>
               <h3 className={`font-bold mb-6 flex items-center gap-2 ${editId ? "text-amber-500" : "text-white"}`}>

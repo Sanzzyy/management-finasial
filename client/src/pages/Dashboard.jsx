@@ -672,6 +672,16 @@ const Dashboard = () => {
                         >
                           {t.category}
                         </span>
+                        {t.type === "EXPENSE" && t.priority && (
+                          <>
+                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-gray-600"></span>
+                            <span
+                              className={`px-2 py-0.5 rounded-md border text-[10px] uppercase tracking-wider font-bold ${t.priority === "NEED" ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-purple-500/10 border-purple-500/20 text-purple-400"}`}
+                            >
+                              {t.priority}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

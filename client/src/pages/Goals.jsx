@@ -21,7 +21,8 @@ const Goals = () => {
 
   // --- LOADING STATES ---
   const [isCreating, setIsCreating] = useState(false); // Loading saat buat goal baru
-  const [isSavingFund, setIsSavingFund] = useState(false); // Loading saat nabung
+  const [isSavingFund, setIsSavingFund] = useState(false); // Loading saat nabung tombol
+  const [isFetching, setIsFetching] = useState(true); // Loading saat ambil data awal (Skeleton)
 
   // Format Currency
   const formatCurrency = (number) => {
@@ -50,11 +51,14 @@ const Goals = () => {
   }, []);
 
   const fetchGoals = async () => {
+    setIsFetching(true); // Mulai Skeleton
     try {
       const response = await api.get("/goals");
       setGoals(response.data);
     } catch (error) {
       console.error("Failed to fetch goals", error);
+    } finally {
+      setIsFetching(false); // Stop Skeleton
     }
   };
 
@@ -63,7 +67,6 @@ const Goals = () => {
     e.preventDefault();
     if (!user) return;
 
-    // Validasi sederhana
     if (!title || !targetAmount) {
       Swal.fire({
         icon: "warning",
@@ -75,7 +78,7 @@ const Goals = () => {
       return;
     }
 
-    setIsCreating(true); // Start Loading
+    setIsCreating(true);
     const cleanAmount = parseFloat(targetAmount.replaceAll(".", ""));
 
     try {
@@ -84,12 +87,10 @@ const Goals = () => {
         targetAmount: cleanAmount,
       });
 
-      // Reset & Refresh
       setTitle("");
       setTargetAmount("");
-      await fetchGoals();
+      await fetchGoals(); // Refresh data
 
-      // Success Alert
       Swal.fire({
         icon: "success",
         title: "Goal Set! 🚀",
@@ -108,17 +109,16 @@ const Goals = () => {
         color: "#fff",
       });
     } finally {
-      setIsCreating(false); // Stop Loading
+      setIsCreating(false);
     }
   };
 
   // --- HANDLE ADD SAVING (NABUNG) ---
   const handleAddSaving = async (e) => {
     e.preventDefault();
-
     if (!savingAmount) return;
 
-    setIsSavingFund(true); // Start Loading
+    setIsSavingFund(true);
     const cleanAmount = parseFloat(savingAmount.replaceAll(".", ""));
 
     try {
@@ -126,7 +126,6 @@ const Goals = () => {
         amount: cleanAmount,
       });
 
-      // Cek apakah goal ini sekarang lunas/selesai? (Logic opsional untuk efek wow)
       const currentGoal = goals.find((g) => g.id === activeGoalId);
       const isCompletedNow = currentGoal.savedAmount + cleanAmount >= currentGoal.targetAmount;
 
@@ -137,11 +136,10 @@ const Goals = () => {
           text: `You finally achieved: ${currentGoal.title}!`,
           background: "#1e293b",
           color: "#fff",
-          confirmButtonColor: "#10b981", // Green
+          confirmButtonColor: "#10b981",
           confirmButtonText: "Awesome!",
         });
       } else {
-        // Toast kecil kalau cuma nambah tabungan biasa
         const Toast = Swal.mixin({
           toast: true,
           position: "top-end",
@@ -169,7 +167,7 @@ const Goals = () => {
         color: "#fff",
       });
     } finally {
-      setIsSavingFund(false); // Stop Loading
+      setIsSavingFund(false);
     }
   };
 
@@ -212,6 +210,30 @@ const Goals = () => {
       }
     }
   };
+
+  // --- COMPONENT: GOAL SKELETON ---
+  const GoalSkeleton = () => (
+    <div className="rounded-3xl bg-[#1e293b] border border-gray-800 p-6 shadow-lg animate-pulse">
+      <div className="flex justify-between items-start mb-4">
+        <div className="space-y-2 w-full">
+          <div className="h-5 bg-gray-700 rounded w-3/4"></div>
+          <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+        </div>
+        <div className="h-9 w-9 bg-gray-700 rounded-full flex-shrink-0"></div>
+      </div>
+      <div className="mb-4 space-y-2">
+        <div className="h-2.5 w-full bg-gray-700 rounded-full"></div>
+        <div className="flex justify-between">
+          <div className="h-3 w-10 bg-gray-700 rounded"></div>
+          <div className="h-3 w-16 bg-gray-700 rounded"></div>
+        </div>
+      </div>
+      <div className="pt-4 border-t border-gray-800 flex gap-2">
+        <div className="h-9 flex-1 bg-gray-700 rounded-xl"></div>
+        <div className="h-9 w-10 bg-gray-700 rounded-xl"></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#0f172a] font-sans text-gray-100 pb-28 pt-20 md:pt-0">
@@ -296,19 +318,32 @@ const Goals = () => {
 
         {/* --- PART 2: GOALS LIST (GRID BOTTOM) --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {goals.length === 0 ? (
-            <div className="col-span-full rounded-3xl border border-dashed bg-[#1e293b] border-gray-800 p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+          {/* LOGIKA DISPLAY: Fetching -> Empty -> Data */}
+          {isFetching ? (
+            // TAMPILKAN 3 SKELETON
+            <>
+              <GoalSkeleton />
+              <GoalSkeleton />
+              <GoalSkeleton />
+            </>
+          ) : goals.length === 0 ? (
+            // EMPTY STATE
+            <div className="col-span-full rounded-3xl border border-dashed bg-[#1e293b] border-gray-800 p-12 text-center flex flex-col items-center justify-center min-h-[300px] animate-in fade-in zoom-in duration-300">
               <div className="bg-gray-800/50 p-4 rounded-full mb-4">
                 <PiggyBank size={48} className="text-gray-500 opacity-50" />
               </div>
               <p className="text-gray-500">No goals yet. Start dreaming above!</p>
             </div>
           ) : (
+            // REAL DATA
             goals.map((goal) => {
               const percentage = Math.min(Math.round((goal.savedAmount / goal.targetAmount) * 100), 100);
 
               return (
-                <div key={goal.id} className="group relative flex flex-col justify-between rounded-3xl bg-[#1e293b] border border-gray-800 p-6 hover:border-purple-500/30 transition-all duration-300 shadow-lg">
+                <div
+                  key={goal.id}
+                  className="group relative flex flex-col justify-between rounded-3xl bg-[#1e293b] border border-gray-800 p-6 hover:border-purple-500/30 transition-all duration-300 shadow-lg animate-in slide-in-from-bottom-2"
+                >
                   {/* Card Header */}
                   <div className="flex justify-between items-start mb-4">
                     <div className="pr-2">
