@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import api from "../api/axios"; // Pastikan ini mengarah ke axios yang ada withCredentials: true
 import { MessageCircle, Send, Bot, User, Sparkles, ChevronDown, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // Tambahkan ini buat redirect kalau perlu
+import { useLocation, useNavigate } from "react-router-dom";
 
 const ChatAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState([
     {
       role: "ai",
@@ -35,20 +37,46 @@ const ChatAssistant = () => {
 
     if (!userMessage.trim()) return;
 
-    setInput("");
     const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    // 1. Tampilkan pesan user (Optimistic UI)
+    // --- 1. TAMPILKAN PESAN USER (Cukup sekali di sini) ---
     setMessages((prev) => [...prev, { role: "user", text: userMessage, time: timeNow }]);
+    setInput("");
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    const restrictedPaths = ["/", "/login", "/register"];
+    const isRestrictedPage = restrictedPaths.includes(location.pathname);
+
+    // --- LOGIKA PENGECEKAN LOGIN ---
+    if (!user || isRestrictedPage) {
+      setIsLoading(true);
+
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "ai",
+            text: "Eits, akses ditolak! 🔒\n\nKamu harus Login dulu untuk ngobrol sama aku. Data keuanganmu bersifat rahasia lho!",
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+        setIsLoading(false);
+      }, 500);
+
+      if (isRestrictedPage) {
+        localStorage.removeItem("user");
+      }
+      return; // STOP DISINI
+    }
+
+    // --- JIKA LOLOS PENGECEKAN ---
     setIsLoading(true);
 
-    try {
-      // --- PERBAIKAN DI SINI ---
-      // Kita tidak perlu kirim userId manual, karena cookie otomatis terkirim
+    // HAPUS setMessages YANG TADI ADA DISINI (Baris 73 di kode lamamu)
 
+    try {
       const response = await api.post("/chat", {
         message: userMessage,
-        // userId: userId <--- HAPUS INI (Biarkan backend baca dari req.user.id)
       });
 
       setMessages((prev) => [...prev, { role: "ai", text: response.data.reply, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
@@ -56,8 +84,6 @@ const ChatAssistant = () => {
       console.error("Chat Error:", error);
 
       let errorMsg = "Maaf, aku lagi pusing. Coba lagi nanti ya.";
-
-      // Deteksi jika belum login / token expired (401)
       if (error.response?.status === 401) {
         errorMsg = "Sesi kamu habis atau belum login. Silakan login ulang ya! 🔒";
       }
