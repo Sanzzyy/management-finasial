@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 // Import Lucide Icons
-import { Calendar, Clock, MapPin, BookOpen, Laptop, AlertCircle, Sparkles, CheckCircle, Circle, Trash2, Edit2, Plus, X, Loader2 } from "lucide-react";
+import { Calendar, MapPin, BookOpen, Laptop, AlertCircle, Sparkles, CheckCircle, Circle, Trash2, Edit2, Plus, X, Loader2 } from "lucide-react";
 
 const Schedule = () => {
   const [user, setUser] = useState(null);
@@ -26,6 +26,10 @@ const Schedule = () => {
   // --- STATE LOADING ---
   const [isLoading, setIsLoading] = useState(false); // Untuk proses Submit/Edit
   const [isFetching, setIsFetching] = useState(true); // KHUSUS untuk Load Data Awal
+
+  // --- [BARU] State Loading Tab ---
+  const [isTabLoading, setIsTabLoading] = useState(false);
+
   const [schedules, setSchedules] = useState([]);
 
   useEffect(() => {
@@ -40,7 +44,6 @@ const Schedule = () => {
   }, []);
 
   const fetchSchedules = async () => {
-    // Set fetching true saat mulai ambil data
     setIsFetching(true);
     try {
       const response = await api.get("/schedules");
@@ -49,23 +52,35 @@ const Schedule = () => {
       console.error("Failed to fetch schedules", error);
       if (error.response?.status === 401) navigate("/login");
     } finally {
-      // Selesai loading (sukses/gagal), matikan loading
       setIsFetching(false);
     }
   };
 
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+  // --- [BARU] Handler Ganti Hari dengan Efek Loading ---
+  const handleDayChange = (day) => {
+    if (day === activeDay) return;
+
+    setActiveDay(day);
+    handleCancelEdit();
+
+    // Trik UX: Munculkan loading sebentar biar transisi halus
+    setIsTabLoading(true);
+    setTimeout(() => {
+      setIsTabLoading(false);
+    }, 500); // Durasi loading 0.5 detik
+  };
+
   // --- HANDLER: CREATE / UPDATE ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) return;
 
-    setIsLoading(true); // Loading tombol simpan
+    setIsLoading(true);
 
     try {
       if (editId) {
-        // --- UPDATE MODE ---
         await api.put(`/schedules/${editId}`, {
           subject,
           time,
@@ -86,7 +101,6 @@ const Schedule = () => {
 
         setEditId(null);
       } else {
-        // --- CREATE MODE ---
         await api.post("/schedules", {
           subject,
           time,
@@ -106,7 +120,6 @@ const Schedule = () => {
         });
       }
 
-      // Reset Form & Refresh Data
       setSubject("");
       setTime("");
       setRoom("");
@@ -156,10 +169,10 @@ const Schedule = () => {
       await api.put(`/schedules/${item.id}`, {
         isCompleted: !item.isCompleted,
       });
-      fetchSchedules();
+      // fetchSchedules(); // Opsional: gak perlu fetch ulang biar cepet, karena state lokal udah diupdate
     } catch (error) {
       console.error("Failed to update status");
-      fetchSchedules();
+      fetchSchedules(); // Kalau gagal baru fetch ulang
     }
   };
 
@@ -217,7 +230,6 @@ const Schedule = () => {
     }
   };
 
-  // --- COMPONENT: SKELETON LOADER ---
   const ScheduleSkeleton = () => (
     <div className="space-y-4">
       {[1, 2, 3].map((i) => (
@@ -258,10 +270,8 @@ const Schedule = () => {
           {days.map((day) => (
             <button
               key={day}
-              onClick={() => {
-                setActiveDay(day);
-                handleCancelEdit();
-              }}
+              // --- [UPDATE] Panggil handleDayChange ---
+              onClick={() => handleDayChange(day)}
               className={`shrink-0 px-6 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-300 ${
                 activeDay === day ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 scale-105" : "bg-[#1e293b] text-gray-500 hover:text-gray-300 hover:bg-[#283549]"
               }`}
@@ -274,12 +284,10 @@ const Schedule = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT COLUMN: LIST SCHEDULES */}
           <div className="lg:col-span-2 space-y-4">
-            {/* LOGIKA DISPLAY: Fetching -> Empty -> List */}
-            {isFetching ? (
-              // TAMPILKAN SKELETON SAAT LOADING
+            {/* --- [UPDATE] Logic Skeleton: Cek isFetching ATAU isTabLoading --- */}
+            {isFetching || isTabLoading ? (
               <ScheduleSkeleton />
             ) : filteredSchedules.length === 0 ? (
-              // TAMPILKAN EMPTY STATE JIKA DATA KOSONG (SETELAH FETCHING)
               <div className="rounded-3xl bg-[#1e293b] border border-gray-800 p-12 text-center flex flex-col items-center justify-center border-dashed min-h-[300px] animate-in fade-in zoom-in duration-300">
                 <div className="bg-gray-800/50 p-4 rounded-full mb-4">
                   <Calendar size={32} className="text-gray-500 opacity-50" />
@@ -288,7 +296,6 @@ const Schedule = () => {
                 <p className="text-gray-500 text-sm mt-1">Enjoy your free time!</p>
               </div>
             ) : (
-              // TAMPILKAN DATA ASLI
               filteredSchedules.map((item) => (
                 <div
                   key={item.id}
@@ -300,7 +307,6 @@ const Schedule = () => {
 
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pl-4 gap-4">
                     <div className="flex gap-5 items-center">
-                      {/* Time & Type */}
                       <div className="flex flex-col items-center justify-center min-w-[60px]">
                         <span className={`text-lg font-bold flex items-center gap-1 ${item.isCompleted ? "text-gray-500 line-through" : "text-white"}`}>{item.time}</span>
                         <span
@@ -312,7 +318,6 @@ const Schedule = () => {
                         </span>
                       </div>
 
-                      {/* Subject Info */}
                       <div>
                         <h3 className={`text-lg font-bold ${item.isCompleted ? "text-gray-500 line-through decoration-2 decoration-gray-600" : "text-gray-100"}`}>{item.subject}</h3>
                         <div className="flex items-center gap-2 mt-1 text-sm text-gray-400">
@@ -322,7 +327,6 @@ const Schedule = () => {
                       </div>
                     </div>
 
-                    {/* ACTION BUTTONS */}
                     <div className="flex items-center gap-2 border-t sm:border-t-0 border-gray-800 pt-3 sm:pt-0 justify-end">
                       <button
                         onClick={() => handleToggleComplete(item)}
@@ -346,7 +350,7 @@ const Schedule = () => {
             )}
           </div>
 
-          {/* RIGHT COLUMN: FORM (Tidak berubah) */}
+          {/* RIGHT COLUMN: FORM */}
           <div className="lg:col-span-1" id="schedule-form">
             <div className={`sticky top-28 rounded-3xl p-6 border shadow-xl transition-all duration-300 ${editId ? "bg-amber-500/10 border-amber-500/30" : "bg-[#1e293b] border-gray-800"}`}>
               <h3 className={`font-bold mb-6 flex items-center gap-2 ${editId ? "text-amber-500" : "text-white"}`}>
@@ -368,7 +372,6 @@ const Schedule = () => {
               </h3>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Input: Subject */}
                 <div>
                   <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Subject / Activity</label>
                   <input
@@ -383,7 +386,6 @@ const Schedule = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Input: Time */}
                   <div>
                     <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Start Time</label>
                     <div className="relative">
@@ -397,7 +399,6 @@ const Schedule = () => {
                       />
                     </div>
                   </div>
-                  {/* Input: Type */}
                   <div>
                     <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Type</label>
                     <div className="relative">
@@ -419,7 +420,6 @@ const Schedule = () => {
                   </div>
                 </div>
 
-                {/* Input: Room */}
                 <div>
                   <label className="text-[10px] text-gray-500 font-bold uppercase ml-1">Room / Location</label>
                   <div className="relative">
@@ -438,7 +438,6 @@ const Schedule = () => {
                   </div>
                 </div>
 
-                {/* BUTTONS GROUP */}
                 <div className="flex gap-2 mt-4">
                   {editId && (
                     <button

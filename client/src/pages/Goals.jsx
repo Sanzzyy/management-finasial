@@ -15,14 +15,17 @@ const Goals = () => {
   const [title, setTitle] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
 
-  // State Saving
+  // State Saving & Active Input
   const [savingAmount, setSavingAmount] = useState("");
   const [activeGoalId, setActiveGoalId] = useState(null);
 
-  // --- LOADING STATES ---
-  const [isCreating, setIsCreating] = useState(false); // Loading saat buat goal baru
-  const [isSavingFund, setIsSavingFund] = useState(false); // Loading saat nabung tombol
-  const [isFetching, setIsFetching] = useState(true); // Loading saat ambil data awal (Skeleton)
+  // --- LOADING STATES YANG LEBIH CANGGIH ---
+  const [isCreating, setIsCreating] = useState(false); // Loading tombol create
+  const [isFetching, setIsFetching] = useState(true); // Loading awal (Skeleton)
+
+  // Loading Spesifik per Item (Supaya gak semua tombol loading barengan)
+  const [savingGoalId, setSavingGoalId] = useState(null);
+  const [deletingGoalId, setDeletingGoalId] = useState(null);
 
   // Format Currency
   const formatCurrency = (number) => {
@@ -46,19 +49,20 @@ const Goals = () => {
     } else {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-      fetchGoals(userData.id);
+      fetchGoals(userData.id, true); // True = Tampilkan Skeleton di awal
     }
   }, []);
 
-  const fetchGoals = async () => {
-    setIsFetching(true); // Mulai Skeleton
+  // --- IMPROVED FETCH: Bisa fetch di background tanpa skeleton flash ---
+  const fetchGoals = async (userId = user?.id, showSkeleton = false) => {
+    if (showSkeleton) setIsFetching(true);
     try {
       const response = await api.get("/goals");
       setGoals(response.data);
     } catch (error) {
       console.error("Failed to fetch goals", error);
     } finally {
-      setIsFetching(false); // Stop Skeleton
+      if (showSkeleton) setIsFetching(false);
     }
   };
 
@@ -89,7 +93,9 @@ const Goals = () => {
 
       setTitle("");
       setTargetAmount("");
-      await fetchGoals(); // Refresh data
+
+      // Fetch ulang TANPA skeleton (background refresh)
+      await fetchGoals(user.id, false);
 
       Swal.fire({
         icon: "success",
@@ -118,7 +124,8 @@ const Goals = () => {
     e.preventDefault();
     if (!savingAmount) return;
 
-    setIsSavingFund(true);
+    // Set ID goal yang sedang diproses (biar tombol loading spesifik)
+    setSavingGoalId(activeGoalId);
     const cleanAmount = parseFloat(savingAmount.replaceAll(".", ""));
 
     try {
@@ -126,8 +133,12 @@ const Goals = () => {
         amount: cleanAmount,
       });
 
+      // Cek apakah goal tercapai (untuk animasi/notif)
       const currentGoal = goals.find((g) => g.id === activeGoalId);
       const isCompletedNow = currentGoal.savedAmount + cleanAmount >= currentGoal.targetAmount;
+
+      // Update data di background (tanpa skeleton)
+      await fetchGoals(user.id, false);
 
       if (isCompletedNow) {
         Swal.fire({
@@ -157,7 +168,6 @@ const Goals = () => {
 
       setSavingAmount("");
       setActiveGoalId(null);
-      await fetchGoals(user.id);
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -167,7 +177,7 @@ const Goals = () => {
         color: "#fff",
       });
     } finally {
-      setIsSavingFund(false);
+      setSavingGoalId(null); // Matikan loading
     }
   };
 
@@ -186,9 +196,11 @@ const Goals = () => {
     });
 
     if (result.isConfirmed) {
+      setDeletingGoalId(id); // Nyalakan loading di tombol sampah spesifik
+
       try {
         await api.delete(`/goals/${id}`);
-        await fetchGoals(user.id);
+        await fetchGoals(user.id, false); // Refresh background
 
         Swal.fire({
           icon: "success",
@@ -207,6 +219,8 @@ const Goals = () => {
           background: "#1e293b",
           color: "#fff",
         });
+      } finally {
+        setDeletingGoalId(null);
       }
     }
   };
@@ -338,11 +352,12 @@ const Goals = () => {
             // REAL DATA
             goals.map((goal) => {
               const percentage = Math.min(Math.round((goal.savedAmount / goal.targetAmount) * 100), 100);
+              const isDeletingThis = deletingGoalId === goal.id; // Cek apakah kartu ini sedang dihapus
 
               return (
                 <div
                   key={goal.id}
-                  className="group relative flex flex-col justify-between rounded-3xl bg-[#1e293b] border border-gray-800 p-6 hover:border-purple-500/30 transition-all duration-300 shadow-lg animate-in slide-in-from-bottom-2"
+                  className={`group relative flex flex-col justify-between rounded-3xl bg-[#1e293b] border border-gray-800 p-6 hover:border-purple-500/30 transition-all duration-300 shadow-lg animate-in slide-in-from-bottom-2 ${isDeletingThis ? "opacity-50 pointer-events-none" : ""}`}
                 >
                   {/* Card Header */}
                   <div className="flex justify-between items-start mb-4">
@@ -378,19 +393,25 @@ const Goals = () => {
                           type="text"
                           placeholder="Rp..."
                           autoFocus
-                          disabled={isSavingFund}
+                          // Disabled kalau sedang proses saving Goal ini
+                          disabled={savingGoalId === goal.id}
                           className="w-full bg-[#0f172a] rounded-lg px-3 py-2 text-xs text-white border border-gray-700 focus:outline-none focus:border-purple-500 disabled:opacity-50"
                           value={savingAmount}
                           onChange={(e) => handleAmountChange(e, setSavingAmount)}
                         />
                         <button
                           onClick={handleAddSaving}
-                          disabled={isSavingFund}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-1 text-xs font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-10"
+                          disabled={savingGoalId === goal.id}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-1 text-xs font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-10 transition-all"
                         >
-                          {isSavingFund ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                          {/* Cek apakah tombol INI yang sedang loading */}
+                          {savingGoalId === goal.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                         </button>
-                        <button onClick={() => !isSavingFund && setActiveGoalId(null)} className="bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-3 py-1 text-xs flex items-center justify-center disabled:opacity-50">
+                        <button
+                          onClick={() => !savingGoalId && setActiveGoalId(null)}
+                          disabled={savingGoalId === goal.id}
+                          className="bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-3 py-1 text-xs flex items-center justify-center disabled:opacity-50"
+                        >
                           <X size={14} />
                         </button>
                       </div>
@@ -398,7 +419,7 @@ const Goals = () => {
                       <>
                         <button
                           onClick={() => setActiveGoalId(goal.id)}
-                          disabled={percentage >= 100}
+                          disabled={percentage >= 100 || isDeletingThis}
                           className={`flex-1 rounded-xl py-2 text-xs font-bold transition flex items-center justify-center gap-2 ${percentage >= 100 ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default" : "bg-white/5 hover:bg-white/10 text-white"}`}
                         >
                           {percentage >= 100 ? (
@@ -411,8 +432,14 @@ const Goals = () => {
                             </>
                           )}
                         </button>
-                        <button onClick={() => handleDelete(goal.id)} className="px-3 rounded-xl bg-white/5 hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition" title="Delete Goal">
-                          <Trash2 size={16} />
+                        <button
+                          onClick={() => handleDelete(goal.id)}
+                          disabled={isDeletingThis}
+                          className="px-3 rounded-xl bg-white/5 hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition flex items-center justify-center disabled:opacity-50"
+                          title="Delete Goal"
+                        >
+                          {/* Cek apakah tombol sampah INI yang sedang loading */}
+                          {isDeletingThis ? <Loader2 size={16} className="animate-spin text-red-500" /> : <Trash2 size={16} />}
                         </button>
                       </>
                     )}
