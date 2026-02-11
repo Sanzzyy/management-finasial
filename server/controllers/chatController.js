@@ -23,7 +23,7 @@ const chatWithAI = async (req, res) => {
 
     if (!cleanMessage || sapaanRegex.test(cleanMessage)) {
       return res.json({
-        reply: `Halo ${userName}! 👋 Ada yang bisa FinBot bantu curhatin soal uang hari ini?`,
+        reply: `Halo ${userName}! 👋 Ada yang bisa Syzen AI bantu curhatin soal uang hari ini?`,
       });
     }
 
@@ -39,7 +39,7 @@ const chatWithAI = async (req, res) => {
 
     // 3. SYSTEM PROMPT (VERSI NATURAL & NO MARKDOWN)
     const systemPrompt = `
-    PERAN: Kamu adalah "FinBot", teman asisten keuangan yang asik, suportif, dan gaul.
+    PERAN: Kamu adalah "Asisten Management", teman asisten keuangan yang asik, suportif, dan gaul.
     USER: ${userName}
     DATA KEUANGAN: ${dataStatus}
 
@@ -62,7 +62,7 @@ const chatWithAI = async (req, res) => {
     - Jika data KOSONG: Ajak user input dengan semangat.
 
     PERTANYAAN USER: "${cleanMessage}"
-    JAWABAN FINBOT:
+    JAWABAN Syzen AI:
     `;
 
     // Kita pakai model 1.5-flash biar kuota aman & cepat
@@ -75,7 +75,7 @@ const chatWithAI = async (req, res) => {
     res.json({ reply: text });
   } catch (error) {
     console.error("AI Error:", error);
-    res.status(500).json({ reply: "Aduh, FinBot lagi pusing nih. Tanya lagi nanti ya! 🤕" });
+    res.status(500).json({ reply: "Aduh, Syzen AI lagi pusing nih. Tanya lagi nanti ya! 🤕" });
   }
 };
 

@@ -102,7 +102,7 @@ const Footer = () => {
             <span>Made with</span>
             <Heart size={12} className="text-red-500 fill-red-500 animate-pulse" />
             <span>by</span>
-            <a href="https://github.com/Sanzzyy" className="font-bold text-gray-300 hover:text-blue-400 transition">
+            <a href="https://www.tiktok.com/@syzen.web" className="font-bold text-gray-300 hover:text-blue-400 transition">
               Syzen (Sajid)
             </a>
           </div>

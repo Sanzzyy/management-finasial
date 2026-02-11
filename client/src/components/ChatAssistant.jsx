@@ -10,7 +10,7 @@ const ChatAssistant = () => {
   const [messages, setMessages] = useState([
     {
       role: "ai",
-      text: "Halo! Aku FinBot 🤖. Mau cek kesehatan finansialmu hari ini?",
+      text: "Halo! Aku Syzen AI 🤖. Mau cek kesehatan finansialmu hari ini?",
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -127,7 +127,7 @@ const ChatAssistant = () => {
               </div>
               <div>
                 <h3 className="text-white font-bold text-sm flex items-center gap-1">
-                  FinBot <Sparkles size={12} className="text-amber-400 fill-amber-400 animate-pulse" />
+                  Syzen AI <Sparkles size={12} className="text-amber-400 fill-amber-400 animate-pulse" />
                 </h3>
                 <p className="text-blue-200/60 text-[10px] font-medium tracking-wide">Personal Assistant</p>
               </div>
