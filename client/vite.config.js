@@ -21,20 +21,20 @@ export default defineConfig({
         orientation: "portrait",
         icons: [
           {
-            src: "/pwa-192x192.svg", // Kita akan buat icon ini nanti
+            src: "/pwa-192x192.svg",
             sizes: "192x192",
-            type: "image/svg",
-          },
-          {
-            src: "/pwa-512x512.svg", // Icon resolusi tinggi
-            sizes: "512x512",
-            type: "image/svg",
+            type: "image/svg+xml", // <--- UBAH JADI INI
           },
           {
             src: "/pwa-512x512.svg",
             sizes: "512x512",
-            type: "image/svg",
-            purpose: "any maskable", // Agar icon pas di berbagai bentuk (bulat/kotak)
+            type: "image/svg+xml", // <--- UBAH JADI INI
+          },
+          {
+            src: "/pwa-512x512.svg",
+            sizes: "512x512",
+            type: "image/svg+xml", // <--- UBAH JADI INI
+            purpose: "any maskable",
           },
         ],
       },
